@@ -72,7 +72,7 @@ mv kraken/*.kraken .
 
 process KRAKEN_FILTER {
 conda "/idle/ric.cirillo/dimarco.federico/envs/tools"
-cpus 1
+cpus 8
 tag "$replicateId"
 input:
 	tuple val(replicateId), path(R1), path(R2)
@@ -91,8 +91,11 @@ R2=\$(ls ${replicateId}_*R2*.fastq.gz)
 mkdir samp
 extract_kraken_reads.py -s1 \${R1} -s2 \${R2} -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq" -o2 "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq" -r "${kreport}" --fastq-output > /dev/null
 
-gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq"
-gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq"
+#gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq"
+#gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq"
+
+pigz samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq
+pigz samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq
 
 rm \${R1} \${R2}
 
