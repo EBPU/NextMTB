@@ -15,6 +15,7 @@ autoMounts = true
 	params.reff = "${baseDir}/REF/${params.ref}.fasta"
 	params.bed = "$baseDir/REF/h37rv_ups_ordered.bed.gz"
 	params.bedix= "$baseDir/REF/h37rv_ups_ordered.bed.gz.tbi"
+	params.kraken = true
 	params.tgene="$baseDir/REF/target_genes.bed"
 	params.pharma=false
 	params.pgene="$baseDir/REF/gene_drug.csv"
@@ -36,6 +37,10 @@ autoMounts = true
 
 include{COLLECT_READS;
 	COLLECT_READS_ONT;
+	KRAKEN;
+	BRACKEN;
+	BRACKNOUT;
+	KRAKEN_FILTER;
 	MAPPING;
 	MAPPING_ONT;
 	REFINE;
@@ -124,6 +129,22 @@ reads_ch=channel.fromFilePairs(params.reads + '*_R{1,2}*.fastq.gz').map{id,file 
 //reads_ch.view()
 COLLECT_READS(reads_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
 collected=COLLECT_READS.out
+
+
+KRAKEN(collected)
+BRACKEN(KRAKEN.kreport)
+brackenOUT=BRACKEN.out.breport
+brackenOUT=brackenOUT.concat(channel.fromPath("bracken/*.report").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
+brackenOUTB=BRACKEN.out.bout
+brackenOUTB=brackenOUTB.concat(channel.fromPath("bracken/*.bout").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
+MULTIQC(brackenOUT.map{id,file->file}.collect(sort:true),fastqcOUT.map{id,file->file}.collect(sort:true))
+BRACKNOUT(brackenOUTB.map{id,file->file}.collect(sort:true))
+
+if (params.kraken){
+KRAKEN_FILTER(collected,KRAKEN.kraken)
+collected=KRAKEN_FILTER.out
+}
+
 MAPPING(COLLECT_READS.out,params.ref)
 mapped=MAPPING.out
 REFINE(MAPPING.out.bam,params.ref)

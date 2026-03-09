@@ -40,6 +40,122 @@ for i in *.fastq.gz; do basename=`ls \$i | cut -d "_" -f 1`; mv \$i \${basename}
 """
 }
 
+
+
+
+process KRAKEN {
+cpus 16
+memory '150GB'
+tag "$replicateId"
+publishDir "kraken"
+
+input:
+	tuple val(replicateId), path(reads)
+output:
+        tuple val(replicateId), path("*.kreport"), emit: kreport
+		tuple val(replicateId), path("*.kraken"), path("*.kreport"), emit: kraken
+
+script:
+"""
+mkdir kraken
+kraken2 --db /beegfs/datasets/buffer/ric.cirillo/kraken_db/standard_db --threads ${task.cpus} --use-names --gzip-compressed --output kraken/${replicateId}.kraken --report kraken/${replicateId}.kreport --paired $reads
+mv kraken/*.kreport .
+mv kraken/*.kraken .
+#touch ${replicateId}.kreport
+"""
+}
+
+
+/*
+* Kraken Filter
+*/
+
+process KRAKEN_FILTER {
+conda "/idle/ric.cirillo/dimarco.federico/envs/tools"
+cpus 1
+tag "$replicateId"
+input:
+tuple val(replicateId), path(reads)
+tuple val(replicateId), path(kraken), path(kreport)
+output:
+tuple val(replicateId), path('*150bp_R1.fastq.gz'), path('*150bp_R2.fastq.gz')
+script:
+"""
+
+R1=$(ls ${replicateId}_*R1*.fastq.gz)
+R2=$(ls ${replicateId}_*R2*.fastq.gz)
+mkdir samp
+extract_kraken_reads.py \
+    -s1 \${R1} \
+    -s2 \${R2}" \
+    -t 1762 \
+    -k "${kraken}" \
+    --include-children \
+    --include-parents \
+    -o "samp/\${R1}" \
+    -o2 "samp/\${R2}" \
+    -r "${kreport}" \
+    --fastq-output
+
+gzip "samp/\${R1}"
+gzip "samp/\${R2}"
+
+rm \${R1} \${R2}
+
+mv samp/* .
+
+"""
+}
+
+
+
+
+/*
+* BRAKEN
+*/
+
+
+
+process BRACKEN {
+cpus 16
+tag "$replicateId"
+publishDir "bracken", mode:"copy"
+
+input:
+    tuple val(replicateId), path(report)
+output:
+    tuple val(replicateId), path("*.bout"), emit : bout
+	tuple val(replicateId),path("*.report"), emit: breport
+	val 'done', emit:done
+script:
+"""
+mkdir bracken
+bracken -d /beegfs/datasets/buffer/ric.cirillo/kraken_db/standard_db -i $report -o bracken/${replicateId}.bout -w bracken/${replicateId}.report -r 150
+mv bracken/* .
+
+#touch ${replicateId}.report
+#touch ${replicateId}.bout
+
+"""
+}
+
+
+process BRACKNOUT {
+publishDir "OUTPUT", mode:'copy', pattern: 'bracken_summary.csv'
+conda '/idle/ric.cirillo/dimarco.federico/envs/prokka'
+input:
+	path(BRK)
+
+output:
+	path("bracken_summary.csv")
+script:
+"""
+for i in *bout; do awk -F '\t' '{print gensub(".bout","","g",FILENAME),\$0}' OFS='\t' \${i} |tr '\t' ';' | sort -k 8 -n -t ';' | tail -n 1 | cut -f1,2,8; done > bracken_summary.csv
+"""
+
+}
+
+
 /*
 * Bam
 */
