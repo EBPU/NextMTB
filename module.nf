@@ -75,7 +75,7 @@ conda "/idle/ric.cirillo/dimarco.federico/envs/tools"
 cpus 1
 tag "$replicateId"
 input:
-tuple val(replicateId), path(reads)
+tuple val(replicateId), path(R1), path(R2)
 tuple val(replicateId), path(kraken), path(kreport)
 output:
 tuple val(replicateId), path('*150bp_R1.fastq.gz'), path('*150bp_R2.fastq.gz')
