@@ -95,7 +95,7 @@ FILE1=\$(basename ${R1} .gz)
 FILE2=\$(basename ${R2} .gz)
 
 mkdir samp
-extract_kraken_reads.py -s1 \${R1} -s2 \${R2} -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/\${FILE1}" -o2 "samp/\${FILE2}" -r "${kreport}" --fastq-output > /dev/null
+extract_kraken_reads.py -s1 ${R1} -s2 ${R2} -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/\${FILE1}" -o2 "samp/\${FILE2}" -r "${kreport}" --fastq-output > /dev/null
 
 #gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq"
 #gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq"
@@ -108,7 +108,7 @@ pigz samp/\${FILE2} &
 
 wait
 
-rm \${R1} \${R2}
+rm ${R1} ${R2}
 
 mv samp/* .
 
