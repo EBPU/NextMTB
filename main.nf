@@ -144,7 +144,7 @@ KRAKEN_FILTER(collected,KRAKEN.out.kraken)
 collected=KRAKEN_FILTER.out
 }
 
-MAPPING(collected.out,params.ref)
+MAPPING(collected,params.ref)
 mapped=MAPPING.out
 REFINE(MAPPING.out.bam,params.ref)
 refined=REFINE.out
