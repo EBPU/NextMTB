@@ -85,7 +85,7 @@ script:
 R1=\$(ls ${replicateId}_*R1*.fastq.gz)
 R2=\$(ls ${replicateId}_*R2*.fastq.gz)
 mkdir samp
-extract_kraken_reads.py -s1 \${R1} -s2 \${R2}" -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/\${R1}" -o2 "samp/\${R2}" -r "${kreport}" --fastq-output
+extract_kraken_reads.py -s1 \${R1} -s2 \${R2} -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/\${R1}" -o2 "samp/\${R2}" -r "${kreport}" --fastq-output
 
 gzip "samp/\${R1}"
 gzip "samp/\${R2}"
