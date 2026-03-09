@@ -132,7 +132,7 @@ collected=COLLECT_READS.out
 
 
 KRAKEN(collected)
-BRACKEN(KRAKEN.kreport)
+BRACKEN(KRAKEN.out.kreport)
 brackenOUT=BRACKEN.out.breport
 brackenOUT=brackenOUT.concat(channel.fromPath("bracken/*.report").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
 brackenOUTB=BRACKEN.out.bout
@@ -141,7 +141,7 @@ MULTIQC(brackenOUT.map{id,file->file}.collect(sort:true),fastqcOUT.map{id,file->
 BRACKNOUT(brackenOUTB.map{id,file->file}.collect(sort:true))
 
 if (params.kraken){
-KRAKEN_FILTER(collected,KRAKEN.kraken)
+KRAKEN_FILTER(collected,KRAKEN.out.kraken)
 collected=KRAKEN_FILTER.out
 }
 
