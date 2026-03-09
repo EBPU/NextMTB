@@ -51,6 +51,7 @@ publishDir "kraken"
 
 input:
 	tuple val(replicateId), path(reads1), path(reads2)
+	path(krakendb)
 output:
 	tuple val(replicateId), path("*.kreport"), emit: kreport
 	tuple val(replicateId), path("*.kraken"), path("*.kreport"), emit: kraken
@@ -58,7 +59,7 @@ output:
 script:
 """
 mkdir kraken
-kraken2 --db /beegfs/datasets/buffer/ric.cirillo/kraken_db/standard_db --threads ${task.cpus} --use-names --gzip-compressed --output kraken/${replicateId}.kraken --report kraken/${replicateId}.kreport --paired $reads1 $reads2
+kraken2 --db $krakendb --threads ${task.cpus} --use-names --gzip-compressed --output kraken/${replicateId}.kraken --report kraken/${replicateId}.kreport --paired $reads1 $reads2
 mv kraken/*.kreport .
 mv kraken/*.kraken .
 #touch ${replicateId}.kreport
@@ -120,6 +121,7 @@ publishDir "bracken", mode:"copy"
 
 input:
     tuple val(replicateId), path(report)
+	path(krakendb)
 output:
     tuple val(replicateId), path("*.bout"), emit : bout
 	tuple val(replicateId),path("*.report"), emit: breport
@@ -127,7 +129,7 @@ output:
 script:
 """
 mkdir bracken
-bracken -d /beegfs/datasets/buffer/ric.cirillo/kraken_db/standard_db -i $report -o bracken/${replicateId}.bout -w bracken/${replicateId}.report -r 150
+bracken -d $krakendb -i $report -o bracken/${replicateId}.bout -w bracken/${replicateId}.report -r 150
 mv bracken/* .
 
 #touch ${replicateId}.report

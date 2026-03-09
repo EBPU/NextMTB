@@ -16,6 +16,7 @@ autoMounts = true
 	params.bed = "$baseDir/REF/h37rv_ups_ordered.bed.gz"
 	params.bedix= "$baseDir/REF/h37rv_ups_ordered.bed.gz.tbi"
 	params.kraken = true
+	params.krakendb = "/beegfs/datasets/buffer/ric.cirillo/kraken_db/standard_db"
 	params.tgene="$baseDir/REF/target_genes.bed"
 	params.pharma=false
 	params.pgene="$baseDir/REF/gene_drug.csv"
@@ -131,8 +132,8 @@ COLLECT_READS(reads_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
 collected=COLLECT_READS.out
 
 
-KRAKEN(collected)
-BRACKEN(KRAKEN.out.kreport)
+KRAKEN(collected,params.krakendb)
+BRACKEN(KRAKEN.out.kreport,params.krakendb)
 brackenOUT=BRACKEN.out.breport
 brackenOUT=brackenOUT.concat(channel.fromPath("bracken/*.report").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
 brackenOUTB=BRACKEN.out.bout
