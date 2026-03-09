@@ -52,8 +52,8 @@ publishDir "kraken"
 input:
 	tuple val(replicateId), path(reads1), path(reads2)
 output:
-        tuple val(replicateId), path("*.kreport"), emit: kreport
-		tuple val(replicateId), path("*.kraken"), path("*.kreport"), emit: kraken
+	tuple val(replicateId), path("*.kreport"), emit: kreport
+	tuple val(replicateId), path("*.kraken"), path("*.kreport"), emit: kraken
 
 script:
 """
@@ -75,20 +75,24 @@ conda "/idle/ric.cirillo/dimarco.federico/envs/tools"
 cpus 1
 tag "$replicateId"
 input:
-tuple val(replicateId), path(R1), path(R2)
-tuple val(replicateId), path(kraken), path(kreport)
+	tuple val(replicateId), path(R1), path(R2)
+	tuple val(replicateId), path(kraken), path(kreport)
+	val SEQ
+	val minbqual
+	val r
+	val minphred20
 output:
-tuple val(replicateId), path('*150bp_R1.fastq.gz'), path('*150bp_R2.fastq.gz')
+	tuple val(replicateId), path('*150bp_R1.fastq.gz'), path('*150bp_R2.fastq.gz')
 script:
 """
 
 R1=\$(ls ${replicateId}_*R1*.fastq.gz)
 R2=\$(ls ${replicateId}_*R2*.fastq.gz)
 mkdir samp
-extract_kraken_reads.py -s1 \${R1} -s2 \${R2} -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/\${R1}" -o2 "samp/\${R2}" -r "${kreport}" --fastq-output > /dev/null
+extract_kraken_reads.py -s1 \${R1} -s2 \${R2} -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq" -o2 "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq" -r "${kreport}" --fastq-output > /dev/null
 
-gzip "samp/\${R1}"
-gzip "samp/\${R2}"
+gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq"
+gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq"
 
 rm \${R1} \${R2}
 

@@ -140,7 +140,7 @@ brackenOUTB=brackenOUTB.concat(channel.fromPath("bracken/*.bout").map{file->tupl
 BRACKNOUT(brackenOUTB.map{id,file->file}.collect(sort:true))
 
 if (params.kraken){
-KRAKEN_FILTER(collected,KRAKEN.out.kraken)
+KRAKEN_FILTER(collected,KRAKEN.out.kraken,params.SEQ,params.minbqual,params.RP,params.minphred20)
 collected=KRAKEN_FILTER.out
 }
 
