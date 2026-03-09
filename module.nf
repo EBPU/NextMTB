@@ -50,7 +50,7 @@ tag "$replicateId"
 publishDir "kraken"
 
 input:
-	tuple val(replicateId), path(reads)
+	tuple val(replicateId), path(reads1), path(reads2)
 output:
         tuple val(replicateId), path("*.kreport"), emit: kreport
 		tuple val(replicateId), path("*.kraken"), path("*.kreport"), emit: kraken
@@ -58,7 +58,7 @@ output:
 script:
 """
 mkdir kraken
-kraken2 --db /beegfs/datasets/buffer/ric.cirillo/kraken_db/standard_db --threads ${task.cpus} --use-names --gzip-compressed --output kraken/${replicateId}.kraken --report kraken/${replicateId}.kreport --paired $reads
+kraken2 --db /beegfs/datasets/buffer/ric.cirillo/kraken_db/standard_db --threads ${task.cpus} --use-names --gzip-compressed --output kraken/${replicateId}.kraken --report kraken/${replicateId}.kreport --paired $reads1 $reads2
 mv kraken/*.kreport .
 mv kraken/*.kraken .
 #touch ${replicateId}.kreport
