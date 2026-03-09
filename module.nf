@@ -82,8 +82,8 @@ tuple val(replicateId), path('*150bp_R1.fastq.gz'), path('*150bp_R2.fastq.gz')
 script:
 """
 
-R1=$(ls ${replicateId}_*R1*.fastq.gz)
-R2=$(ls ${replicateId}_*R2*.fastq.gz)
+R1=\$(ls ${replicateId}_*R1*.fastq.gz)
+R2=\$(ls ${replicateId}_*R2*.fastq.gz)
 mkdir samp
 extract_kraken_reads.py \
     -s1 \${R1} \
