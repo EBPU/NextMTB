@@ -137,7 +137,6 @@ brackenOUT=BRACKEN.out.breport
 brackenOUT=brackenOUT.concat(channel.fromPath("bracken/*.report").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
 brackenOUTB=BRACKEN.out.bout
 brackenOUTB=brackenOUTB.concat(channel.fromPath("bracken/*.bout").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
-MULTIQC(brackenOUT.map{id,file->file}.collect(sort:true),fastqcOUT.map{id,file->file}.collect(sort:true))
 BRACKNOUT(brackenOUTB.map{id,file->file}.collect(sort:true))
 
 if (params.kraken){
