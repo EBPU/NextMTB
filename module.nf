@@ -89,13 +89,13 @@ script:
 R1=\$(ls ${replicateId}_*R1*.fastq.gz)
 R2=\$(ls ${replicateId}_*R2*.fastq.gz)
 mkdir samp
-extract_kraken_reads.py -s1 \${R1} -s2 \${R2} -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq" -o2 "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq" -r "${kreport}" --fastq-output > /dev/null
+extract_kraken_reads.py -s1 \${R1} -s2 \${R2} -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/${replicateId}_KILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq" -o2 "samp/${replicateId}_KILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq" -r "${kreport}" --fastq-output > /dev/null
 
 #gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq"
 #gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq"
 
-pigz samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq
-pigz samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq
+pigz samp/${replicateId}_KILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq
+pigz samp/${replicateId}_KILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq
 
 rm \${R1} \${R2}
 
