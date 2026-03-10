@@ -84,7 +84,7 @@ input:
 	val minphred20
 output:
 	//tuple val(replicateId), path('*150bp_R1.fastq.gz'), path('*150bp_R2.fastq.gz')
-	tuple val(replicateId),path("${R1}"), path("${R2}")
+	tuple val(replicateId),path("${R1}"), path("${R2}"), emit: reads
 	tuple val(replicateId), path("*_MycoReads.csv"), emit: stats
 script:
 """
