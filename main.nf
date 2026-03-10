@@ -145,7 +145,7 @@ if (params.kraken){
 joined_kraken_ch = collected.join(KRAKEN.out.kraken)
 KRAKEN_FILTER(joined_kraken_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
 collected=KRAKEN_FILTER.out.reads
-kraken_stats=KRAKEN_FILTER.out.stats.map{id,file -> tuple(id,file)}.collect()
+kraken_stats=KRAKEN_FILTER.out.stats.map{id,file -> tuple(file)}.collect()
 KRAKEN_STATS(kraken_stats)
 }
 
