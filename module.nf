@@ -76,8 +76,7 @@ conda "/idle/ric.cirillo/dimarco.federico/envs/tools"
 cpus 8
 tag "$replicateId"
 input:
-	tuple val(replicateId), path(R1), path(R2)
-	tuple val(replicateId), path(kraken), path(kreport)
+	tuple val(replicateId), path(R1), path(R2), path(kraken), path(kreport)
 	val SEQ
 	val minbqual
 	val r
