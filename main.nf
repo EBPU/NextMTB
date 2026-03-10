@@ -42,6 +42,7 @@ include{COLLECT_READS;
 	BRACKEN;
 	BRACKNOUT;
 	KRAKEN_FILTER;
+	KRAKEN_STATS;
 	MAPPING;
 	MAPPING_ONT;
 	REFINE;
@@ -144,6 +145,8 @@ if (params.kraken){
 joined_kraken_ch = collected.join(KRAKEN.out.kraken)
 KRAKEN_FILTER(joined_kraken_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
 collected=KRAKEN_FILTER.out
+kraken_stats=KRAKEN_FILTER.out.stats.map{id,file -> tuple(id,file)}.collect()
+KRAKEN_STATS(kraken_stats)
 }
 
 MAPPING(collected,params.ref)

@@ -75,6 +75,7 @@ process KRAKEN_FILTER {
 conda "/idle/ric.cirillo/dimarco.federico/envs/tools"
 cpus 8
 tag "$replicateId"
+publishDir "Kraken_Stats", mode: 'copy', pattern: '*_MycoReads.csv'
 input:
 	tuple val(replicateId), path(R1), path(R2), path(kraken), path(kreport)
 	val SEQ
@@ -84,6 +85,7 @@ input:
 output:
 	//tuple val(replicateId), path('*150bp_R1.fastq.gz'), path('*150bp_R2.fastq.gz')
 	tuple val(replicateId),path("${R1}"), path("${R2}")
+	tuple val(replicateId), path("*_MycoReads.csv"), emit: stats
 script:
 """
 
@@ -95,6 +97,20 @@ FILE2=\$(basename ${R2} .gz)
 
 mkdir samp
 extract_kraken_reads.py -s1 ${R1} -s2 ${R2} -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/\${FILE1}" -o2 "samp/\${FILE2}" -r "${kreport}" --fastq-output > /dev/null
+
+
+# Get the absolute total reads from the kraken report (Unclassified + Root clade)
+TOTAL_READS=\$(awk '\$5=="0" || \$5=="1" {sum+=\$2} END {print sum}' "${kreport}")
+
+# Count the actually saved reads directly from the extracted FastQ (divide lines by 4)
+SAVED_READS=\$((\$(wc -l < "samp/\${FILE1}") / 4))
+
+# Calculate the exact percentage using awk for floating point math
+PERCENT=\$(awk -v saved="\${SAVED_READS}" -v total="\${TOTAL_READS}" 'BEGIN { printf "%.2f", (saved/total)*100 }')
+
+# Save the exact metrics to the stats file
+echo "${replicateId};1762;\${PERCENT}%;\${SAVED_READS}" > ${replicateId}_MycoReads.csv
+
 
 #gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq"
 #gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq"
@@ -115,6 +131,21 @@ mv samp/* .
 }
 
 
+process KRAKEN_STATS {
+publishDir "OUTPUT", mode:'copy', pattern: 'Kraken_reads_summary.csv'
+conda '/idle/ric.cirillo/dimarco.federico/envs/prokka'
+input:
+	path(BRK)
+
+output:
+	path("Kraken_reads_summary.csv")
+script:
+"""
+echo "Sample;TaxNumber;Percentage;Count" > Kraken_reads_summary.csv
+cat *MycoReads.csv | sort -u >> Kraken_reads_summary.csv
+"""
+
+}
 
 
 /*
