@@ -90,7 +90,7 @@ output:
 script:
 """
 ss=\$(ls -1 *fastq.gz | cut -f2 -d '_')
-mkdir Bam
+mkdir -p Bam
 bwa mem -t ${task.cpus} /opt/conda/share/mtbseq-1.0.4-2/var/ref/${ref}.fasta *.fastq.gz > Bam/${replicateId}.sam 2>> Bam/${replicateId}.bamlog
 samtools view -@ ${task.cpus} -b -T /opt/conda/share/mtbseq-1.0.4-2/var/ref/${ref}.fasta -o Bam/${replicateId}.bam Bam/${replicateId}.sam 2>> Bam/${replicateId}.bamlog
 samtools sort -@ ${task.cpus} -T /tmp/${replicateId}.sorted -o Bam/${replicateId}.sorted.bam Bam/${replicateId}.bam 2>> Bam/${replicateId}.bamlog
@@ -132,8 +132,8 @@ output:
 	val 'done', emit:done
 script:
 """
-mkdir GATK_Bam
-mkdir Bam
+mkdir -p GATK_Bam
+mkdir -p Bam
 mv *bam* Bam/
 USER=a perl /opt/conda/bin/MTBseq --step TBrefine --threads ${task.cpus} --ref ${ref} || echo "processed \$?"
 ln -s GATK_Bam/* .
@@ -144,7 +144,7 @@ ln -s GATK_Bam/* .
 
 process REFINE_ONT {
 cpus 8
-memory "20GB"
+memory "70GB"
 container 'library://allen13x/mtbseq/nf_mtbseq:1.0.1'
 tag "$replicateId"
 publishDir "GATK_Bam", mode:'copy', pattern: "*gatk*"
@@ -158,9 +158,9 @@ output:
 	val 'done', emit:done
 script:
 """
-mkdir GATK_Bam
-mkdir Bam
-mkdir temp_Bam
+mkdir -p GATK_Bam
+mkdir -p Bam
+mkdir -p temp_Bam
 ss=\$(ls -1 *bam | cut -f2 -d '_' | sort -u)
 mv *bam* Bam/
 cat <(samtools view -H Bam/${replicateId}_\${ss}_nBP.bam) <(paste <(samtools view Bam/${replicateId}_\${ss}_nBP.bam | cut -f1-10 ) <(samtools view Bam/${replicateId}_\${ss}_nBP.bam | cut -f 11 | tr "\$(cat ${ascii})" "K")) | samtools view -b -o temp_Bam/${replicateId}_\${ss}_dump.bam -
@@ -169,8 +169,8 @@ samtools index temp_Bam/${replicateId}_\${ss}_final.bam
 
 gatk3 -Xmx30g --analysis_type RealignerTargetCreator --reference_sequence /opt/conda/share/mtbseq-1.0.4-2/var/ref/${ref}.fasta --input_file temp_Bam/${replicateId}_\${ss}_final.bam --downsample_to_coverage 10000 --num_threads ${task.cpus} --out GATK_Bam/${replicateId}_\${ss}.gatk.intervals 2>> GATK_Bam/${replicateId}_\${ss}.gatk.bamlog
 gatk3 -Xmx30g --analysis_type IndelRealigner --reference_sequence /opt/conda/share/mtbseq-1.0.4-2/var/ref/${ref}.fasta --input_file temp_Bam/${replicateId}_\${ss}_final.bam --defaultBaseQualities 4 --targetIntervals GATK_Bam/${replicateId}_\${ss}.gatk.intervals --noOriginalAlignmentTags --out GATK_Bam/${replicateId}_\${ss}.realigned.bam 2>> GATK_Bam/${replicateId}_\${ss}.gatk.bamlog
-gatk3 -Xmx30g --analysis_type BaseRecalibrator --reference_sequence /opt/conda/share/mtbseq-1.0.4-2/var/ref/${ref}.fasta --input_file GATK_Bam/${replicateId}_\${ss}.realigned.bam --knownSites /opt/conda/share/mtbseq-1.0.4-2/var/res/MTB_Base_Calibration_List.vcf --maximum_cycle_value 400000  --num_cpu_threads_per_data_thread ${task.cpus} --out GATK_Bam/${replicateId}_\${ss}.gatk.grp 2>>GATK_Bam/${replicateId}_\${ss}.gatk.bamlog
-gatk3 -Xmx30g -T --analysis_type PrintReads --reference_sequence /opt/conda/share/mtbseq-1.0.4-2/var/ref/${ref}.fasta --input_file GATK_Bam/${replicateId}_\${ss}.realigned.bam --BQSR GATK_Bam/${replicateId}_\${ss}.gatk.grp --num_cpu_threads_per_data_thread ${task.cpus} --out GATK_Bam/${replicateId}_\${ss}_nBP.gatk.bam 2>> GATK_Bam/${replicateId}_\${ss}.gatk.bamlog
+gatk3 -Xmx50g --analysis_type BaseRecalibrator --reference_sequence /opt/conda/share/mtbseq-1.0.4-2/var/ref/${ref}.fasta --input_file GATK_Bam/${replicateId}_\${ss}.realigned.bam --knownSites /opt/conda/share/mtbseq-1.0.4-2/var/res/MTB_Base_Calibration_List.vcf --maximum_cycle_value 600000  --num_cpu_threads_per_data_thread ${task.cpus} --out GATK_Bam/${replicateId}_\${ss}.gatk.grp 2>>GATK_Bam/${replicateId}_\${ss}.gatk.bamlog
+gatk3 -Xmx50g -T --analysis_type PrintReads --reference_sequence /opt/conda/share/mtbseq-1.0.4-2/var/ref/${ref}.fasta --input_file GATK_Bam/${replicateId}_\${ss}.realigned.bam --BQSR GATK_Bam/${replicateId}_\${ss}.gatk.grp --num_cpu_threads_per_data_thread ${task.cpus} --out GATK_Bam/${replicateId}_\${ss}_nBP.gatk.bam 2>> GATK_Bam/${replicateId}_\${ss}.gatk.bamlog
 samtools index GATK_Bam/${replicateId}_\${ss}_nBP.gatk.bam
 rm GATK_Bam/*.realigned.*
 rm -r temp_Bam
@@ -203,8 +203,8 @@ output:
 	val 'done', emit:done
 script:
 """
-mkdir Mpileup
-mkdir GATK_Bam
+mkdir -p Mpileup
+mkdir -p GATK_Bam
 mv *gatk* GATK_Bam
 USER=a perl /opt/conda/bin/MTBseq --step TBpile --threads 8 --ref ${ref} || echo "processed \$?"
 ln -s Mpileup/* .
@@ -229,8 +229,8 @@ output:
 	val 'done', emit:done
 script:
 """
-mkdir Mpileup
-mkdir GATK_Bam
+mkdir -p Mpileup
+mkdir -p GATK_Bam
 ss=\$(ls -1 *bam | cut -f2 -d '_' | sort -u)
 mv *gatk* GATK_Bam
 samtools mpileup -B -A -x -Q ${minbqual} -f /opt/conda/share/mtbseq-1.0.4-2/var/ref/${ref}.fasta -o Mpileup/${replicateId}_\${ss}_nBP.gatk.mpileup GATK_Bam/${replicateId}_\${ss}_nBP.gatk.bam
@@ -257,9 +257,9 @@ output:
         tuple val(replicateId), path("Position_Tables"), emit: LIST
 script:
 """
-mkdir Mpileup
+mkdir -p Mpileup
 mv *mpileup* Mpileup/
-mkdir Position_Tables
+mkdir -p Position_Tables
 USER=a perl /opt/conda/bin/MTBseq --step TBlist --threads 8 --minbqual $minbq --ref ${ref}|| echo "processed \$?"
 ln -s Position_Tables/* .
 """
@@ -283,9 +283,9 @@ output:
         tuple val(replicateId), path("Called"), emit: VAR_LOW
 script:
 """
-mkdir Position_Tables
+mkdir -p Position_Tables
 mv *position_table* Position_Tables
-mkdir Called
+mkdir -p Called
 USER=a perl /opt/conda/bin/MTBseq --step TBvariants --ref ${ref} --mincovf 1 --mincovr 1 --lowfreq_vars --minfreq 5 --minphred20 1 || echo "processed \$?"
 ln -s Called/* .
 """
@@ -313,9 +313,9 @@ output:
         tuple val(replicateId), path("Called"), emit: VAR
 script:
 """
-mkdir Position_Tables
+mkdir -p Position_Tables
 mv *position_table* Position_Tables
-mkdir Called
+mkdir -p Called
 USER=a perl /opt/conda/bin/MTBseq --step TBvariants --ref ${ref}  --mincovf $mincovf --mincovr $mincovr --minphred20 $minphred || echo "processed \$?"
 ln -s Called/* .
 """
@@ -339,11 +339,11 @@ output:
         tuple val(replicateId), path("Statistics"), emit: STATS
 script:
 """
-mkdir Position_Tables
+mkdir -p Position_Tables
 mv *position_table* Position_Tables
-mkdir Bam
+mkdir -p Bam
 mv *bam* Bam/
-mkdir Statistics
+mkdir -p Statistics
 USER=a perl /opt/conda/bin/MTBseq --step TBstats  --mincovf $mincovf --mincovr $mincovr --minphred20 $minphred || echo "processed \$?"
 mv Statistics/Mapping_and_Variant_Statistics.tab Statistics/${replicateId}_Mapping_and_Variant_Statistics.tab
 ln -s Statistics/* .
@@ -374,13 +374,13 @@ output:
 script:
 def joint_select = sample_joint.name != 'placehold' ? "| awk 'NR==FNR{a[\$1];next}(\$1 in a)' ${sample_joint} -" : ''
 """
-mkdir Position_Tables
+mkdir -p Position_Tables
 mv *position_table* Position_Tables
-mkdir Called
+mkdir -p Called
 mv *variants_cf4* Called/
-mkdir Joint
-mkdir Amend
-mkdir Groups
+mkdir -p Joint
+mkdir -p Amend
+mkdir -p Groups
 
 ls -1 Called/*_variants_cf4* | cut -f2 -d'/' | cut -f1,2 -d '_' | tr '_' '\\t' | sort -r | sort -u -k1,1 $joint_select  > sample_joint
 
@@ -404,9 +404,9 @@ output:
 		tuple val(replicateId), path("Classification"), emit: STRAIN
 script:
 """
-mkdir Position_Tables
+mkdir -p Position_Tables
 mv *position_table* Position_Tables
-mkdir Classification
+mkdir -p Classification
 USER=a perl /opt/conda/bin/MTBseq --step TBstrains || echo "processed \$?"
 mv Classification/Strain_Classification.tab Classification/${replicateId}_Strain_Classification.tab
 ln -s Classification/* .
@@ -611,6 +611,7 @@ output:
 
 script:
 """
+
 #!/usr/bin/env Rscript
 
 library(tidyverse)
@@ -683,7 +684,7 @@ for (i in l){
                          col_names = c('Start','End','Type','Ref','RefR','VarR','Precision','Freq','Length','Gene'))%>% 
                          filter(as.character(Precision)=="1")%>%
                          separate(Length,c('Length','Gene'),sep=';') %>%
-                {if(dim(.)[1]>0) mutate(.,Insindex=0,Ref='_',Allel=Type,Type=str_to_title(Type),Subst=" ",GeneName='-', Product=" ",Freq=Freq*100,Qual20=RefR+VarR) %>%
+                {if(dim(.)[1]>0) mutate(.,Insindex=0,Ref='_',Allel=as.character(Type),Type=str_to_title(Type),Subst=" ",GeneName='-', Product=" ",Freq=Freq*100,Qual20=as.numeric(RefR) + as.numeric(VarR)) %>%
                 select(`#Pos`=Start,Insindex,Ref,Type,Allel,Subst,Gene,GeneName,Product,Freq,Qual20)})->a}
         a%>%bind_rows(filter(unique(a%>%filter(Type != 'SNP') %>% arrange(Type, '#Pos') %>% add_count(across(everything()))) %>% ungroup() %>% mutate(Allel= case_when(n %% 3!=0 ~ 'LOF', TRUE ~as.character(Type))), Allel=='LOF'))->a
   a%>%mutate(n=ifelse(is.na(CovFor),'long',as.character(n)))->a
@@ -701,6 +702,7 @@ write_delim(paste(i,'corrected.tab',sep='_'),delim='\\t')
 Sys.chmod(paste(i,'corrected.tab',sep='_'), mode = "0777")
 }
 """
+
 }
 
 
@@ -783,26 +785,84 @@ for (i in l){
 
 
 
-  if (file.exists(paste("${replicateId}",'.dels',sep=''))) {
+  if (file.exists(paste("${replicateId}", ".dels", sep = ""))) {
 
-    a %>% bind_rows(read_delim(paste("${replicateId}",'.dels',sep=''),show_col_types = FALSE,delim=';',
-                         col_names = c('Start','End','Type','Ref','RefR','VarR','Precision','Freq','Length','Gene'))%>% separate(Length,c('Length','Gene'),sep=';') %>%
-                {if(dim(.)[1]>0) mutate(.,Insindex=0,Ref='_',Allel=Type,Type=str_to_title(Type),Subst=" ",GeneName='-', Product=" ",Freq=Freq*100,Qual20=RefR+VarR) %>%
-                select(`#Pos`=Start,Insindex,Ref,Type,Allel,Subst,Gene,GeneName,Product,Freq,Qual20)})->a}
-        a%>%bind_rows(filter(unique(a%>%filter(Type != 'SNP') %>% arrange(Type, '#Pos') %>% add_count(across(everything()))) %>% ungroup() %>% mutate(Allel= case_when(n %% 3!=0 ~ 'LOF', TRUE ~as.character(Type))), Allel=='LOF'))->a
-  
-  a%>%filter(str_detect(Subst,'^[^_]+[1-9]+_'))%>%
-  mutate(Ref=as.character(ifelse(str_detect(Subst,'^[^_]+[1-9]+_'),'_',Ref)),
-        Allel=as.character(ifelse(str_detect(Subst,'^[^_]+[1-9]+_'),'STOP',Allel)))->b
+  dels_file <- paste("${replicateId}", ".dels", sep = "")
 
-   a%>%filter(str_detect(Subst,'^Met1[A-z]+|^Val1[A-z]+')) %>% 
-    filter(!str_detect(Subst,'^(Val1|Met1)(Val|Met)')) %>% 
-    mutate(Ref='START',Allel='STARTLOSS')->c
-  a %>%bind_rows(b)%>%
-  bind_rows(c)%>%
-write_delim(paste(i,'corrected.tab',sep='_'),delim='\\t')
-Sys.chmod(paste(i,'corrected.tab',sep='_'), mode = "0777")
+  dels_df <- read_delim(
+    dels_file,
+    delim = ";",
+    show_col_types = FALSE,
+    col_names = c(
+      "Start","End","Type","Ref",
+      "RefR","VarR","Precision",
+      "Freq","Length","Gene"
+    )
+  ) %>%
+    separate(
+      Length,
+      c("Length","Gene"),
+      sep = ";",
+      fill = "right",
+      extra = "merge"
+    ) %>%
+    mutate(
+      # conversioni sicure
+      Start = suppressWarnings(as.numeric(Start)),
+      RefR  = suppressWarnings(as.numeric(RefR)),
+      VarR  = suppressWarnings(as.numeric(VarR)),
+      Freq  = suppressWarnings(as.numeric(Freq)),
+
+      RefR = replace_na(RefR, 0),
+      VarR = replace_na(VarR, 0),
+      Freq = replace_na(Freq, 0),
+
+      # colonne coerenti con 'a'
+      `#Pos`   = Start,
+      Insindex = 0,
+      Ref      = "_",
+      Type     = as.character(str_to_title(Type)),
+      Allel    = as.character(Type),
+      Subst    = " ",
+      Gene     = as.character(Gene),
+      GeneName = "-",
+      Product  = " ",
+      Freq     = Freq * 100,
+      Qual20   = RefR + VarR
+    ) %>%
+    select(`#Pos`, Insindex, Ref, Type, Allel,
+           Subst, Gene, GeneName, Product,
+           Freq, Qual20)
+
+  # forza coerenza tipi anche su 'a'
+  a <- a %>%
+    mutate(
+      across(c(Type, Allel, Ref, Subst, Gene, GeneName, Product), as.character),
+      across(c(`#Pos`, Insindex, Freq, Qual20), as.numeric)
+    )
+
+  # bind sicuro
+  a <- bind_rows(a, dels_df)
 }
+
+# ---------------------------
+# BLOCCO LOF RISCRITTO
+# ---------------------------
+
+lof_df <- a %>%
+  filter(Type != "SNP") %>%
+  arrange(Type, `#Pos`) %>%
+  add_count(across(everything())) %>%
+  mutate(
+    Allel = case_when(
+      n %% 3 != 0 ~ "LOF",
+      TRUE ~ as.character(Type)
+    )
+  ) %>%
+  filter(Allel == "LOF") %>%
+  select(-n)
+
+a <- bind_rows(a, lof_df)
 """
 }
 
