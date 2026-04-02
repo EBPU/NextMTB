@@ -79,37 +79,37 @@ workflow {
 
 if (params.historical_dir) {
         // Use groupTuple to ensure .bam and .bai for the same ID travel together
-        ch_historical.bams = Channel.fromPath("${params.historical_dir}/*bam*")
+        ch_historical_bams = Channel.fromPath("${params.historical_dir}/*bam*")
             .map { file -> tuple((file.name.replaceAll(/\.bam.*$/, '') - ~/_.*/), file) }
             .groupTuple()
 
-        ch_historical.ptables = Channel.fromPath("${params.historical_dir}/*table.tab")
+        ch_historical_ptables = Channel.fromPath("${params.historical_dir}/*table.tab")
             .map { file -> tuple((file.getSimpleName() - ~/_.*/), file) }
 
-        ch_historical.var_low = Channel.fromPath("${params.historical_dir}/*variants_cf1*001.tab")
+        ch_historical_var_low = Channel.fromPath("${params.historical_dir}/*variants_cf1*001.tab")
             .map { file -> tuple((file.getSimpleName() - ~/_.*/), file) }
 
-        ch_historical.var_std = Channel.fromPath("${params.historical_dir}/*variants_cf4*")
+        ch_historical_var_std = Channel.fromPath("${params.historical_dir}/*variants_cf4*")
             .map { file -> tuple((file.getSimpleName() - ~/_.*/), file) }
 
-        ch_historical.corrected = Channel.fromPath("${params.historical_dir}/*corrected.tab")
+        ch_historical_corrected = Channel.fromPath("${params.historical_dir}/*corrected.tab")
             .map { file -> tuple((file.getSimpleName() - ~/_.*/), file) }
     } else {
-        ch_historical.bams      = Channel.empty()
-        ch_historical.ptables   = Channel.empty()
-        ch_historical.var_low   = Channel.empty()
-        ch_historical.var_std   = Channel.empty()
-        ch_historical.corrected = Channel.empty()
+        ch_historical_bams      = Channel.empty()
+        ch_historical_ptables   = Channel.empty()
+        ch_historical_var_low   = Channel.empty()
+        ch_historical_var_std   = Channel.empty()
+        ch_historical_corrected = Channel.empty()
     }
 
     // 2. Core Analysis Sub-workflow
     // Takes the clean reads from PREPROCESS and performs mapping, GATK refinement, and variant calling
     CORE_ANALYSIS(
         PREPROCESS.out.ready_reads, 
-		ch_historical.bams,      // Inject old BAMs
-        ch_historical.ptables,   // Inject old Position Tables
-        ch_historical.var_std,   // Inject old Standard Variants
-		ch_historical.var_low,   // Inject old Low-freq Variants
+		ch_historical_bams,      // Inject old BAMs
+        ch_historical_ptables,   // Inject old Position Tables
+        ch_historical_var_std,   // Inject old Standard Variants
+		ch_historical_var_low,   // Inject old Low-freq Variants
         params.SEQ, 
         params.ref,
         params.ascii,
@@ -128,8 +128,8 @@ if (params.historical_dir) {
         CORE_ANALYSIS.out.bam,
         CORE_ANALYSIS.out.var_low,
         CORE_ANALYSIS.out.map_strain,
-		ch_historical.var_low,   // Inject old Low-freq Variants
-        ch_historical.corrected, // Inject old Corrected Mutations
+		ch_historical_var_low,   // Inject old Low-freq Variants
+        ch_historical_corrected, // Inject old Corrected Mutations
         params.SEQ,
         params.ref,
         params.bed,
