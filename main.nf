@@ -108,7 +108,7 @@ workflow {
         params.pgene,
         params.tdrug,
         params.dhead,
-        params.WHO,
-        params.headWHO
+        params.who_cat,
+        params.head_who
     )
 }
