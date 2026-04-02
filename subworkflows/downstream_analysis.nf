@@ -8,7 +8,7 @@ workflow DOWNSTREAM_ANALYSIS {
         ch_map_strain
 		ch_hist_var_low
         ch_hist_corrected
-        SEQ
+        seq_type
         ref
         bed
         bedix
@@ -46,8 +46,8 @@ workflow DOWNSTREAM_ANALYSIS {
             
             // Branch bams for deletion calling based on technology
             ch_bam.branch {
-                illumina: SEQ == 'ILL'
-                nanopore: SEQ == 'ONT'
+                illumina: seq_type == 'ILL'
+                nanopore: seq_type == 'ONT'
             }.set { ch_bam_del }
 
             // Call deletions

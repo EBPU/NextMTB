@@ -8,7 +8,7 @@ workflow CORE_ANALYSIS {
 		ch_hist_ptables
 		ch_hist_var_std
 		ch_hist_var_low
-		SEQ
+		seq_type
 		ref
 		ascii
 		minbqual
@@ -28,8 +28,8 @@ workflow CORE_ANALYSIS {
 
 		// Branch input based on sequencing technology
 		ch_reads.branch {
-			illumina: SEQ == 'ILL'
-			nanopore: SEQ == 'ONT'
+			illumina: seq_type == 'ILL'
+			nanopore: seq_type == 'ONT'
 		}.set { processing_branch }
 
 		// --- Illumina Pipeline ---

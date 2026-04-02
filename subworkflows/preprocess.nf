@@ -4,7 +4,7 @@ include { COLLECT_READS; COLLECT_READS_ONT; KRAKEN; BRACKEN; BRACKNOUT; KRAKEN_F
 workflow PREPROCESS {
     take:
         ch_raw_reads
-        SEQ
+        seq_type
         kraken
         krakendb
         minbqual
@@ -14,21 +14,21 @@ workflow PREPROCESS {
     main:
         // Branch reads based on sequencing technology
         ch_raw_reads.branch {
-            illumina: SEQ == 'ILL'
-            nanopore: SEQ == 'ONT'
+            illumina: seq_type == 'ILL'
+            nanopore: seq_type == 'ONT'
         }.set { branched_reads }
 
         // Standardize Illumina reads
-        COLLECT_READS(branched_reads.illumina, SEQ, minbqual, RP, minphred20)
+        COLLECT_READS(branched_reads.illumina, seq_type, minbqual, RP, minphred20)
         
         // Standardize ONT reads
-        COLLECT_READS_ONT(branched_reads.nanopore, SEQ, minbqual, RP, minphred20)
+        COLLECT_READS_ONT(branched_reads.nanopore, seq_type, minbqual, RP, minphred20)
 
         // Merge standardized reads into a single channel
         ch_collected_reads = COLLECT_READS.out.mix(COLLECT_READS_ONT.out)
 
         // Run Kraken and Bracken if requested and sequencing is Illumina
-        if (kraken && SEQ == 'ILL') {
+        if (kraken && seq_type == 'ILL') {
             KRAKEN(ch_collected_reads, krakendb)
             BRACKEN(KRAKEN.out.kreport, krakendb)
             
@@ -37,7 +37,7 @@ workflow PREPROCESS {
 
             // Join reads with kraken output for filtering
             joined_kraken_ch = ch_collected_reads.join(KRAKEN.out.kraken)
-            KRAKEN_FILTER(joined_kraken_ch, SEQ, minbqual, RP, minphred20)
+            KRAKEN_FILTER(joined_kraken_ch, seq_type, minbqual, RP, minphred20)
             
             // Set the filtered reads as the final output
             final_reads = KRAKEN_FILTER.out.reads
