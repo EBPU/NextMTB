@@ -1,0 +1,19 @@
+BootStrap: docker
+From: continuumio/miniconda3
+
+%post
+	apt update
+	apt install -y gawk
+	/opt/conda/bin/conda install -c bioconda -c conda-forge mtbseq  r-essentials bioconductor-biostrings r-tidyverse delly mosdepth python bcftools picard=2.27.5
+	pip install pandas
+	samtools faidx /opt/conda/share/mtbseq-1.0.4-2/var/ref/M._abscessus_CIP-104536T_2014-02-03.fasta
+	samtools faidx /opt/conda/share/mtbseq-1.0.4-2/var/ref/M._chimaera_DSM44623_2016-01-28.fasta
+	samtools faidx /opt/conda/share/mtbseq-1.0.4-2/var/ref/M._fortuitum_CT6_2016-01-08.fasta
+       	bwa index /opt/conda/share/mtbseq-1.0.4-2/var/ref/M._abscessus_CIP-104536T_2014-02-03.fasta
+        bwa index /opt/conda/share/mtbseq-1.0.4-2/var/ref/M._chimaera_DSM44623_2016-01-28.fasta
+        bwa index /opt/conda/share/mtbseq-1.0.4-2/var/ref/M._fortuitum_CT6_2016-01-08.fasta
+	picard CreateSequenceDictionary -R /opt/conda/share/mtbseq-1.0.4-2/var/ref/M._abscessus_CIP-104536T_2014-02-03.fasta -O /opt/conda/share/mtbseq-1.0.4-2/var/ref/M._abscessus_CIP-104536T_2014-02-03.dict
+	picard CreateSequenceDictionary -R /opt/conda/share/mtbseq-1.0.4-2/var/ref/M._chimaera_DSM44623_2016-01-28.fasta -O /opt/conda/share/mtbseq-1.0.4-2/var/ref/M._chimaera_DSM44623_2016-01-28.dict
+	picard CreateSequenceDictionary -R /opt/conda/share/mtbseq-1.0.4-2/var/ref/M._fortuitum_CT6_2016-01-08.fasta -O /opt/conda/share/mtbseq-1.0.4-2/var/ref/M._fortuitum_CT6_2016-01-08.dict
+%labels
+	Author Allen13x
