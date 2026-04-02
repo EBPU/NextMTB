@@ -23,7 +23,7 @@ workflow DOWNSTREAM_ANALYSIS {
     main:
         // --- Genome Breadth & Depth Analysis ---
 
-
+		ch_hist_corrected_ids = ch_hist_corrected.map { it[0] }.toList()
 
         DEPTH(ch_bam, tgene)
         
@@ -62,25 +62,35 @@ workflow DOWNSTREAM_ANALYSIS {
 
             // Correct mutations including deletions
             ch_var_del = ch_var.join(ch_deletion, by: 0)
-            MUT_CORRECTION_DEL(ch_var_del)
-            ch_mut = MUT_CORRECTION_DEL.out
+
+			ch_var_del_to_correct = ch_var_del
+                .combine(ch_hist_corrected_ids)
+                .filter { id, var, del, hist_ids -> !hist_ids.contains(id) }
+                .map { id, var, del, hist_ids -> tuple(id, var, del) }
+			MUT_CORRECTION_DEL(ch_var_del_to_correct)
+            ch_new_corrected = MUT_CORRECTION_DEL.out
             
         } else {
-            // Correct mutations without deletions
-            MUT_CORRECTION(ch_var)
-            ch_mut = MUT_CORRECTION.out
+            // ONLY correct mutations if they DO NOT exist historically
+            ch_var_to_correct = ch_var_low
+                .combine(ch_hist_corrected_ids)
+                .filter { id, var, hist_ids -> !hist_ids.contains(id) }
+                .map { id, var, hist_ids -> tuple(id, var) }
+
+            MUT_CORRECTION(ch_var_to_correct)
+            ch_new_corrected = MUT_CORRECTION.out
         }
 
-        // Incorporate existing corrected mutations
-		ch_mut_gathered = ch_mut
-            .mix(ch_historical_corrected)
+        // --- Pharmacoresistance and WHO Catalogue Analysis ---
+        // Combine newly corrected mutations with historical ones
+        ch_all_corrected = ch_new_corrected
+            .mix(ch_hist_corrected)
             .unique { it[0] }
             .map { id, file -> file }
             .collect()
 
-        // --- Pharmacoresistance and WHO Catalogue Analysis ---
-        MUT_GATHER(ch_mut_gathered)
-        PHARMA(ch_mut_gathered, tdrug, pgene)
+        MUT_GATHER(ch_all_corrected)
+        PHARMA(ch_all_corrected, tdrug, pgene)
         WHO(MUT_GATHER.out, dhead, who_cat)
         OUT_WHO(WHO.out, head_who)
 }

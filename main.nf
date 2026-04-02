@@ -77,26 +77,29 @@ workflow {
         params.minphred20
     )
 
-	if (params.historical_dir) {
-        Channel.fromPath("${params.historical_dir}/**")
+if (params.historical_dir) {
+        // Use groupTuple to ensure .bam and .bai for the same ID travel together
+        ch_historical.bams = Channel.fromPath("${params.historical_dir}/*bam*")
+            .map { file -> tuple((file.name.replaceAll(/\.bam.*$/, '') - ~/_.*/), file) }
+            .groupTuple()
+
+        ch_historical.ptables = Channel.fromPath("${params.historical_dir}/*table.tab")
             .map { file -> tuple((file.getSimpleName() - ~/_.*/), file) }
-            .branch {
-                bams:      it[1].name.endsWith('.bam')
-                ptables:   it[1].name.endsWith('table.tab')
-                var_low:   it[1].name.contains('variants_cf1') && it[1].name.endsWith('001.tab')
-                var_std:   it[1].name.contains('variants_cf4')
-                corrected: it[1].name.endsWith('corrected.tab')
-            }
-            .set { ch_historical }
+
+        ch_historical.var_low = Channel.fromPath("${params.historical_dir}/*variants_cf1*001.tab")
+            .map { file -> tuple((file.getSimpleName() - ~/_.*/), file) }
+
+        ch_historical.var_std = Channel.fromPath("${params.historical_dir}/*variants_cf4*")
+            .map { file -> tuple((file.getSimpleName() - ~/_.*/), file) }
+
+        ch_historical.corrected = Channel.fromPath("${params.historical_dir}/*corrected.tab")
+            .map { file -> tuple((file.getSimpleName() - ~/_.*/), file) }
     } else {
-        // Create empty channels if no historical directory is provided
-        ch_historical = [
-            bams:      Channel.empty(),
-            ptables:   Channel.empty(),
-            var_low:   Channel.empty(),
-            var_std:   Channel.empty(),
-            corrected: Channel.empty()
-        ]
+        ch_historical.bams      = Channel.empty()
+        ch_historical.ptables   = Channel.empty()
+        ch_historical.var_low   = Channel.empty()
+        ch_historical.var_std   = Channel.empty()
+        ch_historical.corrected = Channel.empty()
     }
 
     // 2. Core Analysis Sub-workflow
@@ -106,6 +109,7 @@ workflow {
 		ch_historical.bams,      // Inject old BAMs
         ch_historical.ptables,   // Inject old Position Tables
         ch_historical.var_std,   // Inject old Standard Variants
+		ch_historical.var_low,   // Inject old Low-freq Variants
         params.SEQ, 
         params.ref,
         params.ascii,
