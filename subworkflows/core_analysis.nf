@@ -4,9 +4,9 @@ include { MAPPING; MAPPING_ONT; REFINE; REFINE_ONT; PILE; PILE_ONT; LIST; VARIAN
 workflow CORE_ANALYSIS {
 	take:
 		ch_reads
-		ch_historical_bams
-		ch_historical_ptables
-		ch_historical_var_std
+		ch_hist_bams
+		ch_hist_ptables
+		ch_hist_var_std
 		ch_hist_var_low
 		SEQ
 		ref

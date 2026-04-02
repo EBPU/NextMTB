@@ -6,8 +6,8 @@ workflow DOWNSTREAM_ANALYSIS {
         ch_bam
         ch_var_low
         ch_map_strain
-		ch_historical_var_low
-        ch_historical_corrected
+		ch_hist_var_low
+        ch_hist_corrected
         SEQ
         ref
         bed
@@ -37,7 +37,7 @@ workflow DOWNSTREAM_ANALYSIS {
         }
 
 		ch_var = ch_var_low
-            .mix(ch_historical_var_low)
+            .mix(ch_hist_var_low)
             .unique { it[0] }
 		
 
