@@ -40,8 +40,8 @@ workflow DOWNSTREAM_ANALYSIS {
             
             // Branch bams for deletion calling based on technology
             ch_bam.branch {
-                illumina: seq_type == 'ILL'
-                nanopore: seq_type == 'ONT'
+                illumina: SEQ == 'ILL'
+                nanopore: SEQ == 'ONT'
             }.set { ch_bam_del }
 
             // Call deletions
