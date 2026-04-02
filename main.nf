@@ -1,247 +1,114 @@
+// Enable DSL2 syntax
 nextflow.enable.dsl = 2
-autoMounts = true
-/*
- * Define the default parameters
- */ 
-	params.reads	= "$baseDir/samp"
-	params.results	= "OUTPUT"
-	params.SEQ	= "ILL"
-	params.minbqual	= "13"
-	params.RP	= "0"
-	params.minphred20	= "4"
-	params.mincovf	= "4"
-	params.mincovr	= "4"
-	params.ref="M._tuberculosis_H37Rv_2015-11-13"
-	params.reff = "${baseDir}/REF/${params.ref}.fasta"
-	params.bed = "$baseDir/REF/h37rv_ups_ordered.bed.gz"
-	params.bedix= "$baseDir/REF/h37rv_ups_ordered.bed.gz.tbi"
-	params.kraken = true
-	params.krakendb = ""
-	params.tgene="$baseDir/REF/target_genes.bed"
-	params.pharma=false
-	params.pgene="$baseDir/REF/gene_drug.csv"
-	params.tdrug=10
-	params.dhead="/$baseDir/REF/head"
-	params.WHO="/$baseDir/REF/WHO_custom.csv"
-	params.extra=true
-	params.join=true
-	params.sj="$baseDir/REF/placehold"
-	params.proj='def'
-	params.ascii="$baseDir/REF/ascii_string"
-	params.h=false
-	params.headWHO="$baseDir/REF/Header_WHO.csv"
 
+// Print help message if requested
+if (params.h) {
+    log.info """
+    =========================================
+    MTB Pipeline (DSL2 Version)
+    =========================================
+    --SEQ       Sequencing technology (ILL or ONT) [default: ILL]
+    --ref       Reference Genome to use [default: M._tuberculosis_H37Rv_2015-11-13]
+    --join      Perform joint analysis [default: true]
+    --sj        List of samples to use for joint analysis [optional]
+    --proj      Name of the project for joint analysis [default: def]
+    --pharma    Perform Drug resistance analysis at Custom frequencies [default: false]
+    --tdrug     Custom frequencies % [default: 10]
+    --WHO       Path to the WHO catalogue file formatted
+    --extra     Perform extra analysis [default: true]
+    """
+    exit 0
+}
 
-/* 
- * Import modules 
- */
+// Import sub-workflows
+include { PREPROCESS }          from './subworkflows/preprocess.nf'
+include { CORE_ANALYSIS }       from './subworkflows/core_analysis.nf'
+include { DOWNSTREAM_ANALYSIS } from './subworkflows/downstream_analysis.nf'
 
-include{COLLECT_READS;
-	COLLECT_READS_ONT;
-	KRAKEN;
-	BRACKEN;
-	BRACKNOUT;
-	KRAKEN_FILTER;
-	KRAKEN_STATS;
-	MAPPING;
-	MAPPING_ONT;
-	REFINE;
-	REFINE_ONT;
-	PILE;
-	PILE_ONT;
-	LIST;
-	VARIANTS_LOW;
-	VARIANTS;
-	STATS;
-	STRAIN;
-	MAP_STRAIN;
-	JOIN;
-	DEL;
-	DEL_ONT;
-	OUT_DEL;
-	DEPTH;
-	OUT_DEPTH;
-	MUT_CORRECTION_DEL;
-	MUT_CORRECTION;
-	MUT_GATHER;
-	PHARMA;
-	WHO;
-	OUT_WHO;
-	FINAL_OUT} from "$baseDir/module.nf"
-/* 
- * main pipeline logic
- */
-
+// Import standalone modules for the pharma-only run
+include { PHARMA; MUT_GATHER; WHO; OUT_WHO } from './modules/all_modules.nf'
 
 workflow {
-if (params.h){
-log.info """
-  --SEQ		    Sequencing technology:
-				          ILL: Illumina [default]
-				          ONT: Oxford Nanopore technology  
-  --ref        Reference Genome to use:
-                  M._abscessus_CIP-104536T_2014-02-03
-                  M._chimaera_DSM44623_2016-01-28
-                  M._fortuitum_CT6_2016-01-08
-                  M._tuberculosis_H37Rv_2015-11-13 [default]
-  --join       Perform joint analysis [default: true]
-  --sj         List of samples to use for joint analysis [optional]
-  --proj       Name of the project for joint analysis [default: def]
-  --pharma     Perform Drug resistance analysis at Custom frequencies (to use after first round of analysis) [default: false]
-  --tdrug      Custom frequencies % [default: 10]
-  --WHO        Path to the WHO catalogue file formatted (Default = Catalogue v1)
-  --extra      Perform extra analysis [default: true]:
-                 Deletion/Insertion detection with Delly2
-                 Sequencing depth with Mosdepth
-                 Pharma analysis at 10% and Comparison with WHO catalogue              
-"""
-}else{
-if (params.pharma){
+    
+    // --- Standalone Pharma Mode ---
+    // Bypasses the rest of the pipeline if --pharma is provided
+    if (params.pharma) {
+        ch_tabs = Channel.fromPath('Called/*corrected.tab').collect()
+        PHARMA(ch_tabs, params.tdrug, params.pgene)
+        MUT_GATHER(ch_tabs)
+        WHO(MUT_GATHER.out, params.dhead, params.WHO)
+        OUT_WHO(WHO.out, params.headWHO)
+        
+        // Terminate pipeline execution early
+        exit 0 
+    }
 
-PHARMA(Channel.fromPath('Called/*corrected.tab').collect(),params.tdrug,params.pgene)
-MUT_GATHER(Channel.fromPath('Called/*corrected.tab').collect())
-WHO(MUT_GATHER.out,params.dhead,params.WHO)
-OUT_WHO(WHO.out,params.headWHO)
+    // --- Standard Pipeline Execution ---
+    
+    // Log starting parameters for traceability
+    log.info """\
+    =========================================
+    Starting MTB Pipeline...
+    Reads       : ${params.reads}
+    Reference   : ${params.ref}
+    Technology  : ${params.SEQ}
+    Results Dir : ${params.results}
+    =========================================
+    """
 
+    // Create the initial input channel based on the sequencing technology
+    if (params.SEQ == "ILL") {
+        ch_raw_reads = Channel.fromFilePairs(params.reads + '*_R{1,2}*.fastq.gz')
+            .map { id, file -> tuple((id - ~/_.*/), file) }
+    } else {
+        ch_raw_reads = Channel.fromPath(params.reads + '/*fastq.gz')
+            .map { file -> tuple((file.getSimpleName() - ~/_.*/), file) }
+    }
+
+    // 1. Pre-processing Sub-workflow
+    // Handles reading, standardized naming, and optional Kraken filtering
+    PREPROCESS(
+        ch_raw_reads, 
+        params.SEQ, 
+        params.kraken, 
+        params.krakendb,
+        params.minbqual,
+        params.RP,
+        params.minphred20
+    )
+
+    // 2. Core Analysis Sub-workflow
+    // Takes the clean reads from PREPROCESS and performs mapping, GATK refinement, and variant calling
+    CORE_ANALYSIS(
+        PREPROCESS.out.ready_reads, 
+        params.SEQ, 
+        params.ref,
+        params.ascii,
+        params.minbqual,
+        params.mincovf,
+        params.mincovr,
+        params.minphred20,
+        params.join,
+        params.sj,
+        params.proj
+    )
+
+    // 3. Downstream Analysis Sub-workflow
+    // Takes BAMs and variants from CORE_ANALYSIS to perform depth calculation, deletions, and WHO reporting
+    DOWNSTREAM_ANALYSIS(
+        CORE_ANALYSIS.out.bam,
+        CORE_ANALYSIS.out.var_low,
+        CORE_ANALYSIS.out.map_strain,
+        params.SEQ,
+        params.ref,
+        params.bed,
+        params.bedix,
+        params.tgene,
+        params.extra,
+        params.pgene,
+        params.tdrug,
+        params.dhead,
+        params.WHO,
+        params.headWHO
+    )
 }
-else{
-log.info """\
-================================
-reads   	: $params.reads + '*_R{1,2}*.fastq.gz'
-reference	: $params.ref
-bed			: $params.bed
-SEQ		: $params.SEQ
-minbq		: $params.minbqual
-REP REG		: $params.RP
-minphred20	: $params.minphred20
-mincovF		: $params.mincovf
-mincovR		: $params.mincovr
-results		: $params.results
-Interesing genes: $params.bed
-Target genes: $params.tgene
-Drug genes: $params.pgene
-Mutation Threshold: $params.tdrug
-WHO Catalogue: $params.WHO
-SampleList: $params.sj
-"""
-
-if(params.SEQ == "ILL"){
-
-reads_ch=channel.fromFilePairs(params.reads + '*_R{1,2}*.fastq.gz').map{id,file ->tuple((id - ~/_.*/),file)}
-//reads_ch.view()
-COLLECT_READS(reads_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
-collected=COLLECT_READS.out
-
-if (params.kraken){
-KRAKEN(collected,params.krakendb)
-BRACKEN(KRAKEN.out.kreport,params.krakendb)
-brackenOUT=BRACKEN.out.breport
-brackenOUT=brackenOUT.concat(channel.fromPath("bracken/*.report").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
-brackenOUTB=BRACKEN.out.bout
-brackenOUTB=brackenOUTB.concat(channel.fromPath("bracken/*.bout").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
-BRACKNOUT(brackenOUTB.map{id,file->file}.collect(sort:true))
-
-
-joined_kraken_ch = collected.join(KRAKEN.out.kraken)
-KRAKEN_FILTER(joined_kraken_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
-collected=KRAKEN_FILTER.out.reads
-kraken_stats=KRAKEN_FILTER.out.stats.map{id,file -> tuple(file)}.collect()
-KRAKEN_STATS(kraken_stats)
-}
-
-MAPPING(collected,params.ref)
-mapped=MAPPING.out
-REFINE(MAPPING.out.bam,params.ref)
-refined=REFINE.out
-PILE(REFINE.out.gatk,params.ref)
-piled=PILE.out
-}
-else{
-reads_ch=channel.fromPath(params.reads + '/*fastq.gz').map{file ->tuple((file.getSimpleName() - ~/_.*/),file)}
-//reads_ch.view()
-COLLECT_READS_ONT(reads_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
-collected=COLLECT_READS_ONT.out
-MAPPING_ONT(COLLECT_READS_ONT.out,params.ref)
-mapped=MAPPING_ONT.out
-REFINE_ONT(MAPPING_ONT.out.bam,params.ref,params.ascii)
-refined=REFINE_ONT.out
-PILE_ONT(REFINE_ONT.out.gatk,params.ref,params.minbqual)
-piled=PILE_ONT.out}
-old_mapped=channel.fromPath('Bam/*bam*').map{file -> tuple ((file.getSimpleName())- ~/_.*/,file)}.groupTuple()
-new_mapped=mapped.bam
-mapped_bam=new_mapped.concat(old_mapped).unique{it[0]}
-LIST(piled.mpile,params.minbqual,params.ref)
-old_list=channel.fromPath('Position_Tables/*table.tab').map{file -> tuple ((file.getSimpleName())- ~/_.*/,file)}.groupTuple()
-new_list=LIST.out.list
-ptables=new_list.concat(old_list).unique{it[0]}
-VARIANTS_LOW(LIST.out.list,params.ref)
-VARIANTS(LIST.out.list,params.mincovf,params.mincovr,params.minphred20,params.ref)
-STATS(mapped_bam.join(ptables,by: 0),params.mincovf,params.mincovr,params.minphred20)
-STRAIN(ptables)
-map_strain=STATS.out.stats.join(STRAIN.out.strain,by:0).map{id,file1,file2 -> tuple(file1,file2)}.collect()
-//old_map=channel.fromPath('OUTPUT/Mapping_Classification.tab')
-map_strain=map_strain.collect()
-MAP_STRAIN(map_strain)
-DEPTH(mapped_bam,params.tgene)
-depth=DEPTH.out.map{id,file->file}
-//old_cov=channel.fromPath('OUTPUT/GB_cov.*')
-depth=depth.collect()
-OUT_DEPTH(depth)
-var=VARIANTS_LOW.out.var_low
-old_var=Channel.fromPath('Called/*variants_cf1*001.tab').map{file -> tuple ((file.getSimpleName())- ~/_.*/,file)}.groupTuple()
-var=var.concat(old_var).unique{it[0]}
-
-if (params.ref == "M._tuberculosis_H37Rv_2015-11-13"){
-
-FINAL_OUT(OUT_DEPTH.out,MAP_STRAIN.out)
-
-}
-
-if (params.extra){
-if (params.SEQ == "ILL"){	
-DEL(mapped_bam,params.ref,params.bed,params.bedix)
-deletion=DEL.out}
-else{
-DEL_ONT(mapped_bam,params.ref,params.bed,params.bedix)
-deletion=DEL_ONT.out}
-//var.view()
-delly=deletion.map{id,file -> file}
-//old_del=channel.fromPath('OUTPUT/DELETIONS.*')
-delly=delly.collect()
-OUT_DEL(delly)
-var_del=var.join(deletion,by:0)
-//var_del.view()
-MUT_CORRECTION_DEL(var_del)
-mut=MUT_CORRECTION_DEL.out
-old_mut=Channel.fromPath('Called/*corrected.tab').map{file -> tuple ((file.getSimpleName())- ~/_.*/,file)}
-mut=mut.concat(old_mut).unique{it[0]}.map{id,file->file}.collect()
-MUT_GATHER(mut)
-PHARMA(mut,"10",params.pgene)
-WHO(MUT_GATHER.out,params.dhead,params.WHO)
-OUT_WHO(WHO.out,params.headWHO)
-}
-else{
-MUT_CORRECTION(var)
-mut=MUT_CORRECTION.out
-old_mut=Channel.fromPath('Called/*corrected.tab').map{file -> tuple ((file.getSimpleName())- ~/_.*/,file)}
-mut=mut.concat(old_mut).unique{it[0]}.map{id,file->file}.collect()
-//mut.view()
-MUT_GATHER(mut)
-PHARMA(mut,"10",params.pgene)
-WHO(MUT_GATHER.out,params.dhead,params.WHO)
-OUT_WHO(WHO.out,params.headWHO)
-}
-
-if (params.join){
-call=VARIANTS.out.var
-old_call=Channel.fromPath('Called/*variants_cf4*').map{file -> tuple ((file.getSimpleName())- ~/_.*/,file)}
-call=call.concat(old_call).unique{it[0]}.map{id,file->file}.collect()
-list=LIST.out.list
-old_list=Channel.fromPath('Position_Tables/*').map{file -> tuple ((file.getSimpleName())- ~/_.*/,file)}
-list=list.concat(old_list).unique{it[0]}.map{id,file->file}.collect()
-JOIN(call,list,channel.fromPath(params.sj,checkIfExists:true).collect(),params.minbqual,params.minphred20,params.proj,params.ref)
-}
-
-
-}
-}}
