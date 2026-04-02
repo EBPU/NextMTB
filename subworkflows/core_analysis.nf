@@ -14,7 +14,7 @@ workflow CORE_ANALYSIS {
         mincovf
         mincovr
         minphred20
-        join
+        run_join
         sj
         proj
 
