@@ -77,10 +77,35 @@ workflow {
         params.minphred20
     )
 
+	if (params.historical_dir) {
+        Channel.fromPath("${params.historical_dir}/**")
+            .map { file -> tuple((file.getSimpleName() - ~/_.*/), file) }
+            .branch {
+                bams:      it[1].name.endsWith('.bam')
+                ptables:   it[1].name.endsWith('table.tab')
+                var_low:   it[1].name.contains('variants_cf1') && it[1].name.endsWith('001.tab')
+                var_std:   it[1].name.contains('variants_cf4')
+                corrected: it[1].name.endsWith('corrected.tab')
+            }
+            .set { ch_historical }
+    } else {
+        // Create empty channels if no historical directory is provided
+        ch_historical = [
+            bams:      Channel.empty(),
+            ptables:   Channel.empty(),
+            var_low:   Channel.empty(),
+            var_std:   Channel.empty(),
+            corrected: Channel.empty()
+        ]
+    }
+
     // 2. Core Analysis Sub-workflow
     // Takes the clean reads from PREPROCESS and performs mapping, GATK refinement, and variant calling
     CORE_ANALYSIS(
         PREPROCESS.out.ready_reads, 
+		ch_historical.bams,      // Inject old BAMs
+        ch_historical.ptables,   // Inject old Position Tables
+        ch_historical.var_std,   // Inject old Standard Variants
         params.SEQ, 
         params.ref,
         params.ascii,
@@ -99,6 +124,8 @@ workflow {
         CORE_ANALYSIS.out.bam,
         CORE_ANALYSIS.out.var_low,
         CORE_ANALYSIS.out.map_strain,
+		ch_historical.var_low,   // Inject old Low-freq Variants
+        ch_historical.corrected, // Inject old Corrected Mutations
         params.SEQ,
         params.ref,
         params.bed,

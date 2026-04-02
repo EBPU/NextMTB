@@ -6,6 +6,8 @@ workflow DOWNSTREAM_ANALYSIS {
         ch_bam
         ch_var_low
         ch_map_strain
+		ch_historical_var_low
+        ch_historical_corrected
         SEQ
         ref
         bed
@@ -20,6 +22,9 @@ workflow DOWNSTREAM_ANALYSIS {
 
     main:
         // --- Genome Breadth & Depth Analysis ---
+
+
+
         DEPTH(ch_bam, tgene)
         
         // Collect depth outputs
@@ -31,9 +36,10 @@ workflow DOWNSTREAM_ANALYSIS {
             FINAL_OUT(OUT_DEPTH.out, ch_map_strain)
         }
 
-        // Incorporate old variants to ensure completeness
-        ch_old_var = Channel.fromPath('Called/*variants_cf1*001.tab').map { file -> tuple((file.getSimpleName() - ~/_.*/), file) }.groupTuple()
-        ch_var = ch_var_low.mix(ch_old_var).unique { it[0] }
+		ch_var = ch_var_low
+            .mix(ch_historical_var_low)
+            .unique { it[0] }
+		
 
         // --- Extra Analysis (Deletions) OR Standard Mutation Correction ---
         if (run_extra) {
@@ -66,8 +72,11 @@ workflow DOWNSTREAM_ANALYSIS {
         }
 
         // Incorporate existing corrected mutations
-        ch_old_mut = Channel.fromPath('Called/*corrected.tab').map { file -> tuple((file.getSimpleName() - ~/_.*/), file) }
-        ch_mut_gathered = ch_mut.mix(ch_old_mut).unique { it[0] }.map { id, file -> file }.collect()
+		ch_mut_gathered = ch_mut
+            .mix(ch_historical_corrected)
+            .unique { it[0] }
+            .map { id, file -> file }
+            .collect()
 
         // --- Pharmacoresistance and WHO Catalogue Analysis ---
         MUT_GATHER(ch_mut_gathered)
