@@ -132,7 +132,7 @@ reads_ch=channel.fromFilePairs(params.reads + '*_R{1,2}*.fastq.gz').map{id,file 
 COLLECT_READS(reads_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
 collected=COLLECT_READS.out
 
-
+if (params.kraken){
 KRAKEN(collected,params.krakendb)
 BRACKEN(KRAKEN.out.kreport,params.krakendb)
 brackenOUT=BRACKEN.out.breport
@@ -141,7 +141,7 @@ brackenOUTB=BRACKEN.out.bout
 brackenOUTB=brackenOUTB.concat(channel.fromPath("bracken/*.bout").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
 BRACKNOUT(brackenOUTB.map{id,file->file}.collect(sort:true))
 
-if (params.kraken){
+
 joined_kraken_ch = collected.join(KRAKEN.out.kraken)
 KRAKEN_FILTER(joined_kraken_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
 collected=KRAKEN_FILTER.out.reads
