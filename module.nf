@@ -40,6 +40,161 @@ for i in *.fastq.gz; do basename=`ls \$i | cut -d "_" -f 1`; mv \$i \${basename}
 """
 }
 
+
+
+
+process KRAKEN {
+cpus 16
+memory '150GB'
+tag "$replicateId"
+publishDir "kraken"
+
+input:
+	tuple val(replicateId), path(reads1), path(reads2)
+	path(krakendb)
+output:
+	tuple val(replicateId), path("*.kreport"), emit: kreport
+	tuple val(replicateId), path("*.kraken"), path("*.kreport"), emit: kraken
+
+script:
+"""
+mkdir kraken
+kraken2 --db $krakendb --threads ${task.cpus} --use-names --gzip-compressed --output kraken/${replicateId}.kraken --report kraken/${replicateId}.kreport --paired $reads1 $reads2
+mv kraken/*.kreport .
+mv kraken/*.kraken .
+#touch ${replicateId}.kreport
+"""
+}
+
+
+/*
+* Kraken Filter
+*/
+
+process KRAKEN_FILTER {
+conda "/idle/ric.cirillo/dimarco.federico/envs/tools"
+cpus 8
+tag "$replicateId"
+publishDir "Kraken_Stats", mode: 'copy', pattern: '*_MycoReads.csv'
+input:
+	tuple val(replicateId), path(R1), path(R2), path(kraken), path(kreport)
+	val SEQ
+	val minbqual
+	val r
+	val minphred20
+output:
+	//tuple val(replicateId), path('*150bp_R1.fastq.gz'), path('*150bp_R2.fastq.gz')
+	tuple val(replicateId),path("${R1}"), path("${R2}"), emit: reads
+	tuple val(replicateId), path("*_MycoReads.csv"), emit: stats
+script:
+"""
+
+#R1=\$(ls ${replicateId}_*R1*.fastq.gz)
+#R2=\$(ls ${replicateId}_*R2*.fastq.gz)
+
+FILE1=\$(basename ${R1} .gz)
+FILE2=\$(basename ${R2} .gz)
+
+mkdir samp
+extract_kraken_reads.py -s1 ${R1} -s2 ${R2} -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/\${FILE1}" -o2 "samp/\${FILE2}" -r "${kreport}" --fastq-output > /dev/null
+
+
+# Get the absolute total reads from the kraken report (Unclassified + Root clade)
+TOTAL_READS=\$(awk '\$5=="0" || \$5=="1" {sum+=\$2} END {print sum}' "${kreport}")
+
+# Count the actually saved reads directly from the extracted FastQ (divide lines by 4)
+SAVED_READS=\$((\$(wc -l < "samp/\${FILE1}") / 4))
+
+# Calculate the exact percentage using awk for floating point math
+PERCENT=\$(awk -v saved="\${SAVED_READS}" -v total="\${TOTAL_READS}" 'BEGIN { printf "%.2f", (saved/total)*100 }')
+
+# Save the exact metrics to the stats file
+echo "${replicateId};1762;\${PERCENT}%;\${SAVED_READS}" > ${replicateId}_MycoReads.csv
+
+
+#gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq"
+#gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq"
+
+#pigz samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq
+#pigz samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq
+
+pigz samp/\${FILE1} &
+pigz samp/\${FILE2} &
+
+wait
+
+rm ${R1} ${R2}
+
+mv samp/* .
+
+"""
+}
+
+
+process KRAKEN_STATS {
+publishDir "OUTPUT", mode:'copy', pattern: 'Kraken_reads_summary.csv'
+conda '/idle/ric.cirillo/dimarco.federico/envs/prokka'
+input:
+	path(BRK)
+
+output:
+	path("Kraken_reads_summary.csv")
+script:
+"""
+echo "Sample;TaxNumber;Percentage;Count" > Kraken_reads_summary.csv
+cat *MycoReads.csv | sort -u >> Kraken_reads_summary.csv
+"""
+
+}
+
+
+/*
+* BRAKEN
+*/
+
+
+
+process BRACKEN {
+cpus 16
+tag "$replicateId"
+publishDir "bracken", mode:"copy"
+
+input:
+    tuple val(replicateId), path(report)
+	path(krakendb)
+output:
+    tuple val(replicateId), path("*.bout"), emit : bout
+	tuple val(replicateId),path("*.report"), emit: breport
+	val 'done', emit:done
+script:
+"""
+mkdir bracken
+bracken -d $krakendb -i $report -o bracken/${replicateId}.bout -w bracken/${replicateId}.report -r 150
+mv bracken/* .
+
+#touch ${replicateId}.report
+#touch ${replicateId}.bout
+
+"""
+}
+
+
+process BRACKNOUT {
+publishDir "OUTPUT", mode:'copy', pattern: 'bracken_summary.csv'
+conda '/idle/ric.cirillo/dimarco.federico/envs/prokka'
+input:
+	path(BRK)
+
+output:
+	path("bracken_summary.csv")
+script:
+"""
+for i in *bout; do awk -F '\t' '{print gensub(".bout","","g",FILENAME),\$0}' OFS='\t' \${i} |tr '\t' ';' | sort -k 8 -n -t ';' | tail -n 1 | cut -f1,2,8; done > bracken_summary.csv
+"""
+
+}
+
+
 /*
 * Bam
 */
@@ -611,7 +766,6 @@ output:
 
 script:
 """
-
 #!/usr/bin/env Rscript
 
 library(tidyverse)
@@ -702,7 +856,6 @@ write_delim(paste(i,'corrected.tab',sep='_'),delim='\\t')
 Sys.chmod(paste(i,'corrected.tab',sep='_'), mode = "0777")
 }
 """
-
 }
 
 
@@ -785,84 +938,26 @@ for (i in l){
 
 
 
-  if (file.exists(paste("${replicateId}", ".dels", sep = ""))) {
+  if (file.exists(paste("${replicateId}",'.dels',sep=''))) {
 
-  dels_file <- paste("${replicateId}", ".dels", sep = "")
+    a %>% bind_rows(read_delim(paste("${replicateId}",'.dels',sep=''),show_col_types = FALSE,delim=';',
+                         col_names = c('Start','End','Type','Ref','RefR','VarR','Precision','Freq','Length','Gene'))%>% separate(Length,c('Length','Gene'),sep=';') %>%
+                {if(dim(.)[1]>0) mutate(.,Insindex=0,Ref='_',Allel=Type,Type=str_to_title(Type),Subst=" ",GeneName='-', Product=" ",Freq=Freq*100,Qual20=RefR+VarR) %>%
+                select(`#Pos`=Start,Insindex,Ref,Type,Allel,Subst,Gene,GeneName,Product,Freq,Qual20)})->a}
+        a%>%bind_rows(filter(unique(a%>%filter(Type != 'SNP') %>% arrange(Type, '#Pos') %>% add_count(across(everything()))) %>% ungroup() %>% mutate(Allel= case_when(n %% 3!=0 ~ 'LOF', TRUE ~as.character(Type))), Allel=='LOF'))->a
+  
+  a%>%filter(str_detect(Subst,'^[^_]+[1-9]+_'))%>%
+  mutate(Ref=as.character(ifelse(str_detect(Subst,'^[^_]+[1-9]+_'),'_',Ref)),
+        Allel=as.character(ifelse(str_detect(Subst,'^[^_]+[1-9]+_'),'STOP',Allel)))->b
 
-  dels_df <- read_delim(
-    dels_file,
-    delim = ";",
-    show_col_types = FALSE,
-    col_names = c(
-      "Start","End","Type","Ref",
-      "RefR","VarR","Precision",
-      "Freq","Length","Gene"
-    )
-  ) %>%
-    separate(
-      Length,
-      c("Length","Gene"),
-      sep = ";",
-      fill = "right",
-      extra = "merge"
-    ) %>%
-    mutate(
-      # conversioni sicure
-      Start = suppressWarnings(as.numeric(Start)),
-      RefR  = suppressWarnings(as.numeric(RefR)),
-      VarR  = suppressWarnings(as.numeric(VarR)),
-      Freq  = suppressWarnings(as.numeric(Freq)),
-
-      RefR = replace_na(RefR, 0),
-      VarR = replace_na(VarR, 0),
-      Freq = replace_na(Freq, 0),
-
-      # colonne coerenti con 'a'
-      `#Pos`   = Start,
-      Insindex = 0,
-      Ref      = "_",
-      Type     = as.character(str_to_title(Type)),
-      Allel    = as.character(Type),
-      Subst    = " ",
-      Gene     = as.character(Gene),
-      GeneName = "-",
-      Product  = " ",
-      Freq     = Freq * 100,
-      Qual20   = RefR + VarR
-    ) %>%
-    select(`#Pos`, Insindex, Ref, Type, Allel,
-           Subst, Gene, GeneName, Product,
-           Freq, Qual20)
-
-  # forza coerenza tipi anche su 'a'
-  a <- a %>%
-    mutate(
-      across(c(Type, Allel, Ref, Subst, Gene, GeneName, Product), as.character),
-      across(c(`#Pos`, Insindex, Freq, Qual20), as.numeric)
-    )
-
-  # bind sicuro
-  a <- bind_rows(a, dels_df)
+   a%>%filter(str_detect(Subst,'^Met1[A-z]+|^Val1[A-z]+')) %>% 
+    filter(!str_detect(Subst,'^(Val1|Met1)(Val|Met)')) %>% 
+    mutate(Ref='START',Allel='STARTLOSS')->c
+  a %>%bind_rows(b)%>%
+  bind_rows(c)%>%
+write_delim(paste(i,'corrected.tab',sep='_'),delim='\\t')
+Sys.chmod(paste(i,'corrected.tab',sep='_'), mode = "0777")
 }
-
-# ---------------------------
-# BLOCCO LOF RISCRITTO
-# ---------------------------
-
-lof_df <- a %>%
-  filter(Type != "SNP") %>%
-  arrange(Type, `#Pos`) %>%
-  add_count(across(everything())) %>%
-  mutate(
-    Allel = case_when(
-      n %% 3 != 0 ~ "LOF",
-      TRUE ~ as.character(Type)
-    )
-  ) %>%
-  filter(Allel == "LOF") %>%
-  select(-n)
-
-a <- bind_rows(a, lof_df)
 """
 }
 

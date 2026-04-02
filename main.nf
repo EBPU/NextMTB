@@ -8,13 +8,15 @@ autoMounts = true
 	params.SEQ	= "ILL"
 	params.minbqual	= "13"
 	params.RP	= "0"
-	params.minphred20	= "4" //4
-	params.mincovf	= "4"//4
-	params.mincovr	= "4" //4
+	params.minphred20	= "4"
+	params.mincovf	= "4"
+	params.mincovr	= "4"
 	params.ref="M._tuberculosis_H37Rv_2015-11-13"
 	params.reff = "${baseDir}/REF/${params.ref}.fasta"
 	params.bed = "$baseDir/REF/h37rv_ups_ordered.bed.gz"
 	params.bedix= "$baseDir/REF/h37rv_ups_ordered.bed.gz.tbi"
+	params.kraken = true
+	params.krakendb = ""
 	params.tgene="$baseDir/REF/target_genes.bed"
 	params.pharma=false
 	params.pgene="$baseDir/REF/gene_drug.csv"
@@ -36,6 +38,11 @@ autoMounts = true
 
 include{COLLECT_READS;
 	COLLECT_READS_ONT;
+	KRAKEN;
+	BRACKEN;
+	BRACKNOUT;
+	KRAKEN_FILTER;
+	KRAKEN_STATS;
 	MAPPING;
 	MAPPING_ONT;
 	REFINE;
@@ -124,7 +131,25 @@ reads_ch=channel.fromFilePairs(params.reads + '*_R{1,2}*.fastq.gz').map{id,file 
 //reads_ch.view()
 COLLECT_READS(reads_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
 collected=COLLECT_READS.out
-MAPPING(COLLECT_READS.out,params.ref)
+
+if (params.kraken){
+KRAKEN(collected,params.krakendb)
+BRACKEN(KRAKEN.out.kreport,params.krakendb)
+brackenOUT=BRACKEN.out.breport
+brackenOUT=brackenOUT.concat(channel.fromPath("bracken/*.report").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
+brackenOUTB=BRACKEN.out.bout
+brackenOUTB=brackenOUTB.concat(channel.fromPath("bracken/*.bout").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
+BRACKNOUT(brackenOUTB.map{id,file->file}.collect(sort:true))
+
+
+joined_kraken_ch = collected.join(KRAKEN.out.kraken)
+KRAKEN_FILTER(joined_kraken_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
+collected=KRAKEN_FILTER.out.reads
+kraken_stats=KRAKEN_FILTER.out.stats.map{id,file -> tuple(file)}.collect()
+KRAKEN_STATS(kraken_stats)
+}
+
+MAPPING(collected,params.ref)
 mapped=MAPPING.out
 REFINE(MAPPING.out.bam,params.ref)
 refined=REFINE.out
