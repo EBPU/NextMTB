@@ -40,6 +40,161 @@ for i in *.fastq.gz; do basename=`ls \$i | cut -d "_" -f 1`; mv \$i \${basename}
 """
 }
 
+
+
+
+process KRAKEN {
+cpus 16
+memory '150GB'
+tag "$replicateId"
+publishDir "kraken"
+
+input:
+	tuple val(replicateId), path(reads1), path(reads2)
+	path(krakendb)
+output:
+	tuple val(replicateId), path("*.kreport"), emit: kreport
+	tuple val(replicateId), path("*.kraken"), path("*.kreport"), emit: kraken
+
+script:
+"""
+mkdir kraken
+kraken2 --db $krakendb --threads ${task.cpus} --use-names --gzip-compressed --output kraken/${replicateId}.kraken --report kraken/${replicateId}.kreport --paired $reads1 $reads2
+mv kraken/*.kreport .
+mv kraken/*.kraken .
+#touch ${replicateId}.kreport
+"""
+}
+
+
+/*
+* Kraken Filter
+*/
+
+process KRAKEN_FILTER {
+conda "/idle/ric.cirillo/dimarco.federico/envs/tools"
+cpus 8
+tag "$replicateId"
+publishDir "Kraken_Stats", mode: 'copy', pattern: '*_MycoReads.csv'
+input:
+	tuple val(replicateId), path(R1), path(R2), path(kraken), path(kreport)
+	val SEQ
+	val minbqual
+	val r
+	val minphred20
+output:
+	//tuple val(replicateId), path('*150bp_R1.fastq.gz'), path('*150bp_R2.fastq.gz')
+	tuple val(replicateId),path("${R1}"), path("${R2}"), emit: reads
+	tuple val(replicateId), path("*_MycoReads.csv"), emit: stats
+script:
+"""
+
+#R1=\$(ls ${replicateId}_*R1*.fastq.gz)
+#R2=\$(ls ${replicateId}_*R2*.fastq.gz)
+
+FILE1=\$(basename ${R1} .gz)
+FILE2=\$(basename ${R2} .gz)
+
+mkdir samp
+extract_kraken_reads.py -s1 ${R1} -s2 ${R2} -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/\${FILE1}" -o2 "samp/\${FILE2}" -r "${kreport}" --fastq-output > /dev/null
+
+
+# Get the absolute total reads from the kraken report (Unclassified + Root clade)
+TOTAL_READS=\$(awk '\$5=="0" || \$5=="1" {sum+=\$2} END {print sum}' "${kreport}")
+
+# Count the actually saved reads directly from the extracted FastQ (divide lines by 4)
+SAVED_READS=\$((\$(wc -l < "samp/\${FILE1}") / 4))
+
+# Calculate the exact percentage using awk for floating point math
+PERCENT=\$(awk -v saved="\${SAVED_READS}" -v total="\${TOTAL_READS}" 'BEGIN { printf "%.2f", (saved/total)*100 }')
+
+# Save the exact metrics to the stats file
+echo "${replicateId};1762;\${PERCENT}%;\${SAVED_READS}" > ${replicateId}_MycoReads.csv
+
+
+#gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq"
+#gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq"
+
+#pigz samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq
+#pigz samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq
+
+pigz samp/\${FILE1} &
+pigz samp/\${FILE2} &
+
+wait
+
+rm ${R1} ${R2}
+
+mv samp/* .
+
+"""
+}
+
+
+process KRAKEN_STATS {
+publishDir "OUTPUT", mode:'copy', pattern: 'Kraken_reads_summary.csv'
+conda '/idle/ric.cirillo/dimarco.federico/envs/prokka'
+input:
+	path(BRK)
+
+output:
+	path("Kraken_reads_summary.csv")
+script:
+"""
+echo "Sample;TaxNumber;Percentage;Count" > Kraken_reads_summary.csv
+cat *MycoReads.csv | sort -u >> Kraken_reads_summary.csv
+"""
+
+}
+
+
+/*
+* BRAKEN
+*/
+
+
+
+process BRACKEN {
+cpus 16
+tag "$replicateId"
+publishDir "bracken", mode:"copy"
+
+input:
+    tuple val(replicateId), path(report)
+	path(krakendb)
+output:
+    tuple val(replicateId), path("*.bout"), emit : bout
+	tuple val(replicateId),path("*.report"), emit: breport
+	val 'done', emit:done
+script:
+"""
+mkdir bracken
+bracken -d $krakendb -i $report -o bracken/${replicateId}.bout -w bracken/${replicateId}.report -r 150
+mv bracken/* .
+
+#touch ${replicateId}.report
+#touch ${replicateId}.bout
+
+"""
+}
+
+
+process BRACKNOUT {
+publishDir "OUTPUT", mode:'copy', pattern: 'bracken_summary.csv'
+conda '/idle/ric.cirillo/dimarco.federico/envs/prokka'
+input:
+	path(BRK)
+
+output:
+	path("bracken_summary.csv")
+script:
+"""
+for i in *bout; do awk -F '\t' '{print gensub(".bout","","g",FILENAME),\$0}' OFS='\t' \${i} |tr '\t' ';' | sort -k 8 -n -t ';' | tail -n 1 | cut -f1,2,8; done > bracken_summary.csv
+"""
+
+}
+
+
 /*
 * Bam
 */
