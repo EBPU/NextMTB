@@ -42,9 +42,9 @@ workflow CORE_ANALYSIS {
 			.unique { it[0] }
 		
 		ch_bams_to_refine = ch_all_bams
-			.combine(ch_hist_ptable_ids)
-			.filter { id, bams, hist_ids -> !hist_ids.contains(id) }
-			.map { id, bams, hist_ids -> tuple(id, bams) }
+			.join(ch_hist_ptables, by: 0, remainder: true) // Keep all BAMs, even those without historical data
+			.filter { id, bams, ptable -> bams != null && ptable == null }
+            .map { id, bams, ptable -> tuple(id, bams) }
 
 		
 		ch_bams_to_refine.branch {
@@ -69,18 +69,18 @@ workflow CORE_ANALYSIS {
 					.unique { it[0] }
 
 		ch_ptables_for_var_std = ch_all_ptables
-            .combine(ch_hist_var_std_ids)
-            .filter { id, file, hist_ids -> !hist_ids.contains(id) }
-            .map { id, file, hist_ids -> tuple(id, file) }
+            .join(ch_hist_var_std, by: 0, remainder: true)
+            .filter { id, ptable, hist_var -> ptable != null && hist_var == null }
+            .map { id, ptable, hist_var -> tuple(id, ptable) }
 
 
 		VARIANTS(ch_ptables_for_var_std, mincovf, mincovr, minphred20, ref)
 
         // ONLY call low freq variants if they DO NOT exist historically
         ch_ptables_for_var_low = ch_all_ptables
-            .combine(ch_hist_var_low_ids)
-            .filter { id, file, hist_ids -> !hist_ids.contains(id) }
-            .map { id, file, hist_ids -> tuple(id, file) }
+            .join(ch_hist_var_low, by: 0, remainder: true)
+            .filter { id, ptable, hist_var -> ptable != null && hist_var == null }
+            .map { id, ptable, hist_var -> tuple(id, ptable) }
 
         VARIANTS_LOW(ch_ptables_for_var_low, ref)
 
