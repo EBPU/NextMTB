@@ -43,8 +43,8 @@ workflow CORE_ANALYSIS {
 		
 		ch_bams_to_refine = ch_all_bams
 			.join(ch_hist_ptables, by: 0, remainder: true) // Keep all BAMs, even those without historical data
-			.filter { id, bams, ptable -> bams != null && ptable == null }
-            .map { id, bams, ptable -> tuple(id, bams) }
+			.filter { it.size() == 3 && it[1] != null && it[2] == null }
+            .map { tuple(it[0], it[1]) }
 
 		
 		ch_bams_to_refine.branch {
@@ -70,8 +70,8 @@ workflow CORE_ANALYSIS {
 
 		ch_ptables_for_var_std = ch_all_ptables
             .join(ch_hist_var_std, by: 0, remainder: true)
-            .filter { id, ptable, hist_var -> ptable != null && hist_var == null }
-            .map { id, ptable, hist_var -> tuple(id, ptable) }
+            .filter { it.size() == 3 && it[1] != null && it[2] == null }
+            .map { tuple(it[0], it[1]) }
 
 
 		VARIANTS(ch_ptables_for_var_std, mincovf, mincovr, minphred20, ref)
@@ -79,8 +79,8 @@ workflow CORE_ANALYSIS {
         // ONLY call low freq variants if they DO NOT exist historically
         ch_ptables_for_var_low = ch_all_ptables
             .join(ch_hist_var_low, by: 0, remainder: true)
-            .filter { id, ptable, hist_var -> ptable != null && hist_var == null }
-            .map { id, ptable, hist_var -> tuple(id, ptable) }
+            .filter { it.size() == 3 && it[1] != null && it[2] == null }
+            .map { tuple(it[0], it[1]) }
 
         VARIANTS_LOW(ch_ptables_for_var_low, ref)
 

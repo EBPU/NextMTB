@@ -64,9 +64,9 @@ workflow DOWNSTREAM_ANALYSIS {
             ch_var_del = ch_var.join(ch_deletion, by: 0)
 
 			ch_var_del_to_correct = ch_var_del
-                .join(ch_hist_corrected, by: 0, remainder: true)
-                .filter { id, var, del, hist_corr -> var != null && hist_corr == null }
-                .map { id, var, del, hist_corr -> tuple(id, var, del) }
+				.join(ch_hist_corrected, by: 0, remainder: true)
+				.filter { it.size() == 4 && it[1] != null && it[3] == null }
+				.map { tuple(it[0], it[1], it[2]) }
 			
 
 			MUT_CORRECTION_DEL(ch_var_del_to_correct)
