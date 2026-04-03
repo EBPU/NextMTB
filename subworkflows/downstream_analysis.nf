@@ -75,10 +75,10 @@ workflow DOWNSTREAM_ANALYSIS {
         } else {
             // ONLY correct mutations if they DO NOT exist historically
             ch_var_to_correct = ch_var_low
-                .combine(ch_hist_corrected_ids)
-                .filter { id, var, hist_ids -> !hist_ids.contains(id) }
-                .map { id, var, hist_ids -> tuple(id, var) }
-
+				.join(ch_hist_corrected, by: 0, remainder: true)
+                .filter { it.size() == 3 && it[1] != null && it[2] == null }
+                .map { tuple(it[0], it[1]) }
+				
             MUT_CORRECTION(ch_var_to_correct)
             ch_new_corrected = MUT_CORRECTION.out
         }
