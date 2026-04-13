@@ -78,7 +78,7 @@ workflow DOWNSTREAM_ANALYSIS {
 				.join(ch_hist_corrected, by: 0, remainder: true)
                 .filter { it.size() == 3 && it[1] != null && it[2] == null }
                 .map { tuple(it[0], it[1]) }
-				
+
             MUT_CORRECTION(ch_var_to_correct)
             ch_new_corrected = MUT_CORRECTION.out
         }
@@ -95,4 +95,7 @@ workflow DOWNSTREAM_ANALYSIS {
         PHARMA(ch_all_corrected, tdrug, pgene)
         WHO(MUT_GATHER.out, dhead, who_cat)
         OUT_WHO(WHO.out, head_who)
+
+	emit:
+        new_corrected = ch_new_corrected
 }

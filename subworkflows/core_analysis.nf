@@ -101,8 +101,17 @@ workflow CORE_ANALYSIS {
 
         // --- Joint Analysis ---
         if (run_join) {
-            ch_call_mixed = ch_all_var_std.map { id, file -> file }.collect()
-            ch_list_mixed = ch_all_ptables.map { id, file -> file }.collect()
+
+			ch_intersected = ch_all_var_std.join(ch_all_ptables, by: 0)
+
+			// Now you can split them back safely, knowing they perfectly match
+			ch_call_mixed  = ch_intersected.map { id, var, ptable -> var }.collect()
+			ch_list_mixed = ch_intersected.map { id, var, ptable -> ptable }.collect()
+						
+            //ch_call_mixed = ch_all_var_std.map { id, file -> file }.collect()
+            //ch_list_mixed = ch_all_ptables.map { id, file -> file }.collect()
+
+
                 
             JOIN(ch_call_mixed, ch_list_mixed, Channel.fromPath(sj, checkIfExists: true).collect(), minbqual, minphred20, proj, ref)
         }
@@ -111,4 +120,9 @@ workflow CORE_ANALYSIS {
         bam = ch_all_bams
         var_low = ch_all_var_low
         map_strain = MAP_STRAIN.out
+
+		new_bams = MAPPING.out.bam
+        new_ptables = LIST.out.list
+        new_var_std = VARIANTS.out.var
+        new_var_low = VARIANTS_LOW.out.var_low
 }

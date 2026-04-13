@@ -142,4 +142,35 @@ if (params.historical_dir) {
         params.who_cat,
         params.head_who
     )
+
+	if (params.historical_dir) {
+        
+        // Extract only the raw files (dropping the sample ID) and flatten them into a single stream
+        ch_files_to_archive = CORE_ANALYSIS.out.new_bams.map { it.drop(1) }.flatten()
+            .mix( CORE_ANALYSIS.out.new_ptables.map { it.drop(1) }.flatten() )
+            .mix( CORE_ANALYSIS.out.new_var_std.map { it.drop(1) }.flatten() )
+            .mix( CORE_ANALYSIS.out.new_var_low.map { it.drop(1) }.flatten() )
+            .mix( DOWNSTREAM_ANALYSIS.out.new_corrected.map { it.drop(1) }.flatten() )
+
+        // Send all newly generated files to the historical directory
+        ARCHIVE_HISTORICAL(ch_files_to_archive)
+		}
+}
+
+process ARCHIVE_HISTORICAL {
+    tag "Archiving ${file_to_save.name}"
+    
+    // We remove the "archived_" prefix when publishing to the final folder
+    publishDir "${params.historical_dir}", mode: 'link', overwrite: true, saveAs: { filename -> filename.replace('archived_', '') }
+    
+    input:
+    path file_to_save
+    
+    output:
+    path "archived_${file_to_save}"
+    
+    script:
+    """
+    ln ${file_to_save} archived_${file_to_save}
+    """
 }
