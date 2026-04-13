@@ -296,13 +296,8 @@ ln -s GATK_Bam/* .
 
 process REFINE_ONT {
 cpus 8
-<<<<<<< HEAD
-memory "20GB"
-//container 'library://allen13x/mtbseq/nf_mtbseq:1.0.1'
-=======
 memory "100GB"
-container 'library://allen13x/mtbseq/nf_mtbseq:1.0.1'
->>>>>>> 66a161adca9212fb9f5a73a347dee8581e17bac5
+//container 'library://allen13x/mtbseq/nf_mtbseq:1.0.1'
 tag "$replicateId"
 publishDir "GATK_Bam", mode:'copy', pattern: "*gatk*"
 input:
