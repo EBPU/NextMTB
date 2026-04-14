@@ -109,7 +109,7 @@ Place paired-end FASTQ files (matching `*_R1*.fastq.gz` / `*_R2*.fastq.gz`) in a
 ```bash
 nextflow run https://github.com/EBPU/NF_TBSEQ \
   -latest -r main \
-  -with-singularity library://allen13x/mtbseq/nf_mtbseq:1.0.0 \
+  -with-singularity library://allen13x/mtbseq/nf_mtbseq:1.0.2 \
   -resume \
   --join false \
   --extra false \
@@ -121,7 +121,7 @@ nextflow run https://github.com/EBPU/NF_TBSEQ \
 ```bash
 nextflow run https://github.com/EBPU/NF_TBSEQ \
   -latest -r main \
-  -with-singularity library://allen13x/mtbseq/nf_mtbseq:1.0.0 \
+  -with-singularity library://allen13x/mtbseq/nf_mtbseq:1.0.2 \
   -resume \
   --reads $(pwd)/samp/ \
   --extra true \
@@ -134,7 +134,7 @@ nextflow run https://github.com/EBPU/NF_TBSEQ \
 ```bash
 nextflow run https://github.com/EBPU/NF_TBSEQ \
   -latest -r main \
-  -with-singularity library://allen13x/mtbseq/nf_mtbseq:1.0.0 \
+  -with-singularity library://allen13x/mtbseq/nf_mtbseq:1.0.2 \
   -resume \
   --SEQ ONT \
   --reads $(pwd)/samp/ \
