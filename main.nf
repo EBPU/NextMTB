@@ -11,6 +11,7 @@ autoMounts = true
 	params.minphred20	= "4"
 	params.mincovf	= "4"
 	params.mincovr	= "4"
+	params.breadth = "8"
 	params.ref="M._tuberculosis_H37Rv_2015-11-13"
 	params.reff = "${baseDir}/REF/${params.ref}.fasta"
 	params.bed = "$baseDir/REF/h37rv_ups_ordered.bed.gz"
@@ -182,7 +183,7 @@ map_strain=STATS.out.stats.join(STRAIN.out.strain,by:0).map{id,file1,file2 -> tu
 //old_map=channel.fromPath('OUTPUT/Mapping_Classification.tab')
 map_strain=map_strain.collect()
 MAP_STRAIN(map_strain)
-DEPTH(mapped_bam,params.tgene)
+DEPTH(mapped_bam,params.tgene,params.breadth)
 depth=DEPTH.out.map{id,file->file}
 //old_cov=channel.fromPath('OUTPUT/GB_cov.*')
 depth=depth.collect()

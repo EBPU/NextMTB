@@ -673,11 +673,12 @@ tag "$replicateId"
 input:
 	tuple val(replicateId), path(bam)
 	path(tgene)
+	val(breadth)
 output:
 	tuple val(replicateId), path("gbcov_*")
 script:
 """
-mosdepth -b target_genes.bed -n -T 8 ${replicateId} ${replicateId}*.bam
+mosdepth -b target_genes.bed -n -T ${breadth} ${replicateId} ${replicateId}*.bam
 
 zcat ${replicateId}.thresholds.bed.gz | tail -n +2 | awk -v value="GB" '\$4 == value' > ${replicateId}.t.bed
 zcat ${replicateId}.thresholds.bed.gz | tail -n +2 | awk -v value="GB" '\$4 != value' | sort --ignore-case -k4,4 >> ${replicateId}.t.bed
