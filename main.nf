@@ -184,7 +184,7 @@ KRAKEN_STATS(kraken_stats)
 }
 
 
-MAPPING_ONT(COLLECT_READS_ONT.out,params.ref)
+MAPPING_ONT(collected,params.ref)
 mapped=MAPPING_ONT.out
 REFINE_ONT(MAPPING_ONT.out.bam,params.ref,params.ascii)
 refined=REFINE_ONT.out
