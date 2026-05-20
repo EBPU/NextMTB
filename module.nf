@@ -99,6 +99,7 @@ process KRAKEN_FILTER {
 cpus 8
 tag "$replicateId"
 publishDir "Kraken_Stats", mode: 'copy', pattern: '*_MycoReads.csv'
+publishDir "Kraken_Reads", mode: 'hard', pattern: '*_R*.fastq.gz'
 input:
 	tuple val(replicateId), path(R1), path(R2), path(kraken), path(kreport)
 	val SEQ
