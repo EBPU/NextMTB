@@ -40,9 +40,11 @@ autoMounts = true
 include{COLLECT_READS;
 	COLLECT_READS_ONT;
 	KRAKEN;
+	KRAKEN_ONT;
 	BRACKEN;
 	BRACKNOUT;
 	KRAKEN_FILTER;
+	KRAKEN_FILTER_ONT;
 	KRAKEN_STATS;
 	MAPPING;
 	MAPPING_ONT;
@@ -162,6 +164,26 @@ reads_ch=channel.fromPath(params.reads + '/*fastq.gz').map{file ->tuple((file.ge
 //reads_ch.view()
 COLLECT_READS_ONT(reads_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
 collected=COLLECT_READS_ONT.out
+
+
+if (params.kraken){
+KRAKEN_ONT(collected,params.krakendb)
+BRACKEN(KRAKEN_ONT.out.kreport,params.krakendb)
+brackenOUT=BRACKEN.out.breport
+brackenOUT=brackenOUT.concat(channel.fromPath("bracken/*.report").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
+brackenOUTB=BRACKEN.out.bout
+brackenOUTB=brackenOUTB.concat(channel.fromPath("bracken/*.bout").map{file->tuple(file.getSimpleName(),file)}).unique{it[0]}
+BRACKNOUT(brackenOUTB.map{id,file->file}.collect(sort:true))
+
+
+joined_kraken_ch = collected.join(KRAKEN_ONT.out.kraken)
+KRAKEN_FILTER_ONT(joined_kraken_ch,params.SEQ,params.minbqual,params.RP,params.minphred20)
+collected=KRAKEN_FILTER_ONT.out.reads
+kraken_stats=KRAKEN_FILTER_ONT.out.stats.map{id,file -> tuple(file)}.collect()
+KRAKEN_STATS(kraken_stats)
+}
+
+
 MAPPING_ONT(COLLECT_READS_ONT.out,params.ref)
 mapped=MAPPING_ONT.out
 REFINE_ONT(MAPPING_ONT.out.bam,params.ref,params.ascii)

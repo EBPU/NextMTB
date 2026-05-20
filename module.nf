@@ -67,6 +67,30 @@ mv kraken/*.kraken .
 }
 
 
+process KRAKEN_ONT {
+cpus 16
+memory '150GB'
+tag "$replicateId"
+publishDir "kraken"
+
+input:
+	tuple val(replicateId), path(reads)
+	path(krakendb)
+output:
+	tuple val(replicateId), path("*.kreport"), emit: kreport
+	tuple val(replicateId), path("*.kraken"), path("*.kreport"), emit: kraken
+
+script:
+"""
+mkdir kraken
+kraken2 --db $krakendb --threads ${task.cpus} --use-names --gzip-compressed --output kraken/${replicateId}.kraken --report kraken/${replicateId}.kreport $reads
+mv kraken/*.kreport .
+mv kraken/*.kraken .
+#touch ${replicateId}.kreport
+"""
+}
+
+
 /*
 * Kraken Filter
 */
@@ -123,6 +147,63 @@ pigz samp/\${FILE2} &
 wait
 
 rm ${R1} ${R2}
+
+mv samp/* .
+
+"""
+}
+
+
+process KRAKEN_FILTER_ONT {
+cpus 8
+tag "$replicateId"
+publishDir "Kraken_Stats", mode: 'copy', pattern: '*_MycoReads.csv'
+input:
+	tuple val(replicateId), path(R), path(kraken), path(kreport)
+	val SEQ
+	val minbqual
+	val r
+	val minphred20
+output:
+	//tuple val(replicateId), path('*150bp_R1.fastq.gz'), path('*150bp_R2.fastq.gz')
+	tuple val(replicateId),path("${R}"), emit: reads
+	tuple val(replicateId), path("*_MycoReads.csv"), emit: stats
+script:
+"""
+
+#R1=\$(ls ${replicateId}_*R1*.fastq.gz)
+#R2=\$(ls ${replicateId}_*R2*.fastq.gz)
+
+FILE1=\$(basename ${R} .gz)
+
+mkdir samp
+extract_kraken_reads.py -s1 ${R} -t 1762 -k "${kraken}" --include-children --include-parents -o "samp/\${FILE1}" -r "${kreport}" --fastq-output > /dev/null
+
+
+# Get the absolute total reads from the kraken report (Unclassified + Root clade)
+TOTAL_READS=\$(awk '\$5=="0" || \$5=="1" {sum+=\$2} END {print sum}' "${kreport}")
+
+# Count the actually saved reads directly from the extracted FastQ (divide lines by 4)
+SAVED_READS=\$((\$(wc -l < "samp/\${FILE1}") / 4))
+
+# Calculate the exact percentage using awk for floating point math
+PERCENT=\$(awk -v saved="\${SAVED_READS}" -v total="\${TOTAL_READS}" 'BEGIN { printf "%.2f", (saved/total)*100 }')
+
+# Save the exact metrics to the stats file
+echo "${replicateId};1762;\${PERCENT}%;\${SAVED_READS}" > ${replicateId}_MycoReads.csv
+
+
+#gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq"
+#gzip "samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq"
+
+#pigz samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R1.fastq
+#pigz samp/${replicateId}_ILL-Q${minbqual}-RP${r}-PH${minphred20}_150bp_R2.fastq
+
+pigz samp/\${FILE1} &
+
+wait
+
+rm ${R}
 
 mv samp/* .
 
