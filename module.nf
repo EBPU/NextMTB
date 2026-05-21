@@ -159,7 +159,7 @@ process KRAKEN_FILTER_ONT {
 cpus 8
 tag "$replicateId"
 publishDir "Kraken_Stats", mode: 'copy', pattern: '*_MycoReads.csv'
-publishDir "Kraken_Reads", mode: 'link', pattern: '*_R*.fastq.gz'
+publishDir "Kraken_Reads", mode: 'link', pattern: '*_ONT.fastq.gz'
 input:
 	tuple val(replicateId), path(R), path(kraken), path(kreport)
 	val SEQ
