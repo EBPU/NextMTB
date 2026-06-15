@@ -1,6 +1,8 @@
-# NF_TBSEQ
+# NextMTB
 
 A Nextflow implementation of the MTBseq pipeline for whole-genome sequencing analysis of *Mycobacterium tuberculosis* and related species. The pipeline supports both Illumina paired-end and Oxford Nanopore Technology (ONT) reads, and extends the core MTBseq workflow with:
+
+<img width="8000" height="4500" alt="MainFigure" src="https://github.com/user-attachments/assets/bd89945e-2f36-45ba-b873-bdd0e2c0e252" />
 
 - **Taxonomic classification and read filtering** using Kraken2 and Bracken (optional)
 - **Structural variant (deletion/insertion) detection** using Delly2
@@ -107,7 +109,7 @@ FASTQ input (Illumina or ONT)
 Place paired-end FASTQ files (matching `*_R1*.fastq.gz` / `*_R2*.fastq.gz`) in a folder named `samp`, then run:
 
 ```bash
-nextflow run https://github.com/EBPU/NF_TBSEQ \
+nextflow run https://github.com/EBPU/NextMTB \
   -latest -r main \
   -with-singularity library://allen13x/mtbseq/nf_mtbseq:1.0.2 \
   -resume \
@@ -119,7 +121,7 @@ nextflow run https://github.com/EBPU/NF_TBSEQ \
 ### Full analysis with extra modules and joint calling
 
 ```bash
-nextflow run https://github.com/EBPU/NF_TBSEQ \
+nextflow run https://github.com/EBPU/NextMTB \
   -latest -r main \
   -with-singularity library://allen13x/mtbseq/nf_mtbseq:1.0.2 \
   -resume \
@@ -132,7 +134,7 @@ nextflow run https://github.com/EBPU/NF_TBSEQ \
 ### ONT reads
 
 ```bash
-nextflow run https://github.com/EBPU/NF_TBSEQ \
+nextflow run https://github.com/EBPU/NextMTB \
   -latest -r main \
   -with-singularity library://allen13x/mtbseq/nf_mtbseq:1.0.2 \
   -resume \
@@ -147,7 +149,7 @@ nextflow run https://github.com/EBPU/NF_TBSEQ \
 After a completed run, use the corrected mutation tables already present in `Called/`:
 
 ```bash
-nextflow run https://github.com/EBPU/NF_TBSEQ \
+nextflow run https://github.com/EBPU/NextMTB \
   -latest -r main \
   -with-singularity library://allen13x/mtbseq/nf_mtbseq:1.0.0 \
   -resume \
