@@ -102,6 +102,20 @@ FASTQ input (Illumina or ONT)
 | `Kraken_Stats/` | Per-sample Mycobacteria read counts (`*_MycoReads.csv`, `Kraken_reads_summary.csv`) |
 | `bracken/` | Bracken abundance reports |
 
+## Setup
+
+Please install Nextflow and Singularity on your system
+
+### Taxonomic Classification Setup
+
+Download the Kraken/bracken database from [this link](https://benlangmead.github.io/aws-indexes/k2). Standard DB Suggested
+
+```bash
+curl https://genome-idx.s3.amazonaws.com/kraken/k2_standard_20260226.tar.gz
+untar -zxvf k2_standard_20260226.tar.gz
+mv k1_* standard_db
+```
+
 ## Quick Usage
 
 ### Basic single-sample analysis (Illumina)
@@ -116,6 +130,7 @@ nextflow run https://github.com/EBPU/NextMTB \
   --join false \
   --extra false \
   --reads $(pwd)/samp/
+  --kraken false
 ```
 
 ### Full analysis with extra modules and joint calling
@@ -128,7 +143,7 @@ nextflow run https://github.com/EBPU/NextMTB \
   --reads $(pwd)/samp/ \
   --extra true \
   --join true \
-  --proj my_project
+  --krakendb PATH-TO-KRAKENDB
 ```
 
 ### ONT reads
@@ -141,7 +156,8 @@ nextflow run https://github.com/EBPU/NextMTB \
   --SEQ ONT \
   --reads $(pwd)/samp/ \
   --extra true \
-  --join false
+  --join false \
+  --krakendb PATH-TO-KRAKENDB
 ```
 
 ### Re-run drug resistance analysis at a custom allele frequency
@@ -154,7 +170,8 @@ nextflow run https://github.com/EBPU/NextMTB \
   -with-singularity library://allen13x/mtbseq/nf_mtbseq:1.0.0 \
   -resume \
   --pharma true \
-  --tdrug 5
+  --tdrug 5 \
+  --krakendb PATH-TO-KRAKENDB
 ```
 
 ## Parameters
