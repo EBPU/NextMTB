@@ -195,7 +195,7 @@ var=var.concat(old_var).unique{it[0]}
 
 if (params.ref == "M._tuberculosis_H37Rv_2015-11-13"){
 
-FINAL_OUT(OUT_DEPTH.out,MAP_STRAIN.out)
+FINAL_OUT(OUT_DEPTH.out,MAP_STRAIN.out,KRAKEN_STATS.out)
 
 }
 

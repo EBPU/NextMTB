@@ -725,6 +725,7 @@ publishDir 'OUTPUT', mode: "copy", pattern: "FINAL_OUT.csv"
 input:
 	path(map_strain)
 	path(depth)
+	path(kraken)
 output:
 	path("FINAL_OUT.csv")
 script:
@@ -736,15 +737,19 @@ library(tidyverse)
 m=read_delim('Mapping_Classification.tab')
 g=read_delim('GB_cov.csv') %>% 
   select(Samples,Genome_Breadth=GB_perc,Genome_Depth=GB)
-
+k=read_delim('Kraken_reads_summary.csv')%>%
+  select(Samples=Sample,Mycobacteria_reads_percentage=PercentageCount,Mycobacteria_reads_count=Count)
 
 
 m %>% 
   mutate(across(everything(),function(x){str_remove_all(x,"'")})) %>% 
-  select(Samples=SampleID...1,Map_reads=`Mapped Reads`,Map_reads_perc=`% Mapped Reads`,`Homolka species`:`Beijing quality (easy)`)->m1
+  select(Samples=SampleID...1,
+  #Map_reads=`Mapped Reads`,
+  #Map_reads_perc=`% Mapped Reads`,
+  `Homolka species`:`Beijing quality (easy)`)->m1
 
 
-g %>% left_join(m1) %>% write_delim('FINAL_OUT.csv',delim=';')
+g%>%left_join(k) %>% left_join(m1) %>% write_delim('FINAL_OUT.csv',delim=';')
 
 Sys.chmod('FINAL_OUT.csv', mode = "0777")
 
