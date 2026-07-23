@@ -738,7 +738,7 @@ m=read_delim('Mapping_Classification.tab')
 g=read_delim('GB_cov.csv') %>% 
   select(Samples,Genome_Breadth=GB_perc,Genome_Depth=GB)
 k=read_delim('Kraken_reads_summary.csv')%>%
-  select(Samples=Sample,Mycobacteria_reads_percentage=PercentageCount,Mycobacteria_reads_count=Count)
+  select(Samples=Sample,Mycobacteria_reads_percentage=Percentage,Mycobacteria_reads_count=Count)
 
 
 m %>% 
