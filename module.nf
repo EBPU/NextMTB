@@ -738,14 +738,14 @@ m=read_delim('Mapping_Classification.tab')
 g=read_delim('GB_cov.csv') %>% 
   select(Samples,Genome_Breadth=GB_perc,Genome_Depth=GB)
 k=read_delim('Kraken_reads_summary.csv')%>%
-  select(Samples=Sample,Mycobacteria_reads_percentage=Percentage,Mycobacteria_reads_count=Count)
+  select(Samples=Sample,Mycobacteria_reads_count=Count,Mycobacteria_reads_percentage=Percentage)
 
 
 m %>% 
   mutate(across(everything(),function(x){str_remove_all(x,"'")})) %>% 
   select(Samples=SampleID...1,
-  #Map_reads=`Mapped Reads`,
-  #Map_reads_perc=`% Mapped Reads`,
+  Mapped_reads=`Mapped Reads`,
+  Mapped_reads_perc=`% Mapped Reads`,
   `Homolka species`:`Beijing quality (easy)`)->m1
 
 
