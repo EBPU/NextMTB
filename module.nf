@@ -678,7 +678,7 @@ output:
 	tuple val(replicateId), path("gbcov_*")
 script:
 """
-mosdepth -b target_genes.bed -n -T ${breadth} ${replicateId} ${replicateId}*.bam
+mosdepth -b ${tgene} -n -T ${breadth} ${replicateId} ${replicateId}*.bam
 
 zcat ${replicateId}.thresholds.bed.gz | tail -n +2 | awk -v value="GB" '\$4 == value' > ${replicateId}.t.bed
 zcat ${replicateId}.thresholds.bed.gz | tail -n +2 | awk -v value="GB" '\$4 != value' | sort --ignore-case -k4,4 >> ${replicateId}.t.bed
@@ -1023,7 +1023,7 @@ lapply(files, function(x){
     mutate(ID=str_remove_all(x,'_.*'))
 })->l
 
-genes<-read_delim('gene_drug.csv',col_names=c('Gene_name','Start','Stop','Gene','S'))
+genes<-read_delim('${genes}',col_names=c('Gene_name','Start','Stop','Gene','S'))
 
 #from genes get a vector containing all the numbers in the intervavals between Start and Stop
 
