@@ -729,6 +729,10 @@ input:
 output:
 	path("FINAL_OUT.csv")
 script:
+
+def kraken_opt = kraken ? "k=read_delim('Kraken_reads_summary.csv')%>%
+  select(Samples=Sample,Mycobacteria_reads_count=Count,Mycobacteria_reads_percentage=Percentage)" : "k=data.frame(Samples=character(),Mycobacteria_reads_count=numeric(),Mycobacteria_reads_percentage=numeric())"
+
 """
 #!/usr/bin/env Rscript
 

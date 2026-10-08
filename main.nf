@@ -221,8 +221,9 @@ var=var.concat(old_var).unique{it[0]}
 
 if (params.ref == "M._tuberculosis_H37Rv_2015-11-13"){
 
-FINAL_OUT(OUT_DEPTH.out,MAP_STRAIN.out,KRAKEN_STATS.out)
+	ch_kraken_stats = (params.kraken && params.SEQ == "ILL") ? KRAKEN_STATS.out : Channel.value([])
 
+	FINAL_OUT(OUT_DEPTH.out,MAP_STRAIN.out,ch_kraken_stats)
 }
 
 if (params.extra){
