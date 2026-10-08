@@ -82,7 +82,6 @@ log.info """
                        *** RESEARCH USE ONLY (RUO) ***
     NOT FOR CLINICAL DIAGNOSTIC USE, PATIENT CARE, OR DIAGNOSTIC REPORTING
 ================================================================================
- Pipeline: SCCmec Detection Pipeline (Prototype)
  Author  : Federico Di Marco
  Status  : Experimental / Academic Research Only
  
@@ -127,7 +126,6 @@ log.info """\
                        *** RESEARCH USE ONLY (RUO) ***
     NOT FOR CLINICAL DIAGNOSTIC USE, PATIENT CARE, OR DIAGNOSTIC REPORTING
 ================================================================================
- Pipeline: SCCmec Detection Pipeline (Prototype)
  Author  : Federico Di Marco
  Status  : Experimental / Academic Research Only
  
