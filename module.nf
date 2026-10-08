@@ -730,8 +730,7 @@ output:
 	path("FINAL_OUT.csv")
 script:
 
-def kraken_opt = kraken ? "k=read_delim('Kraken_reads_summary.csv')%>%
-  select(Samples=Sample,Mycobacteria_reads_count=Count,Mycobacteria_reads_percentage=Percentage)" : "k=data.frame(Samples=character(),Mycobacteria_reads_count=numeric(),Mycobacteria_reads_percentage=numeric())"
+def kraken_opt = kraken ? "k=read_delim('Kraken_reads_summary.csv')%>%select(Samples=Sample,Mycobacteria_reads_count=Count,Mycobacteria_reads_percentage=Percentage)" : "k=data.frame(Samples=character(),Mycobacteria_reads_count=numeric(),Mycobacteria_reads_percentage=numeric())"
 
 """
 #!/usr/bin/env Rscript
@@ -741,8 +740,10 @@ library(tidyverse)
 m=read_delim('Mapping_Classification.tab')
 g=read_delim('GB_cov.csv') %>% 
   select(Samples,Genome_Breadth=GB_perc,Genome_Depth=GB)
-k=read_delim('Kraken_reads_summary.csv')%>%
-  select(Samples=Sample,Mycobacteria_reads_count=Count,Mycobacteria_reads_percentage=Percentage)
+
+${kraken_opt}
+#k=read_delim('Kraken_reads_summary.csv')%>%
+#  select(Samples=Sample,Mycobacteria_reads_count=Count,Mycobacteria_reads_percentage=Percentage)
 
 
 m %>% 
