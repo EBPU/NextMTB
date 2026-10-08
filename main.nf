@@ -152,6 +152,9 @@ WHO Catalogue: $params.WHO
 SampleList: $params.sj
 """
 
+
+ch_kraken_stats = Channel.value([])
+
 if(params.SEQ == "ILL"){
 
 reads_ch=channel.fromFilePairs(params.reads + '*_R{1,2}*.fastq.gz').map{id,file ->tuple((id - ~/_.*/),file)}
@@ -175,6 +178,8 @@ collected=KRAKEN_FILTER.out.reads
 kraken_stats=KRAKEN_FILTER.out.stats
 kraken_stats=kraken_stats.concat(channel.fromPath("Kraken_Stats/*.csv").map{file->tuple(file.getSimpleName() - ~/_.*/,file)}).unique{it[0]}
 KRAKEN_STATS(kraken_stats.map{id,file->file}.collect(sort:true))
+
+ch_kraken_stats=KRAKEN_STATS.out
 }
 
 MAPPING(collected,params.ref)
@@ -220,8 +225,6 @@ old_var=Channel.fromPath('Called/*variants_cf1*001.tab').map{file -> tuple ((fil
 var=var.concat(old_var).unique{it[0]}
 
 if (params.ref == "M._tuberculosis_H37Rv_2015-11-13"){
-
-	ch_kraken_stats = (params.kraken && params.SEQ == "ILL") ? KRAKEN_STATS.out : Channel.value([])
 
 	FINAL_OUT(OUT_DEPTH.out,MAP_STRAIN.out,ch_kraken_stats)
 }
