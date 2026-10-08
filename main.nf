@@ -77,6 +77,20 @@ include{COLLECT_READS;
 workflow {
 if (params.h){
 log.info """
+
+===============================================================================
+                       *** RESEARCH USE ONLY (RUO) ***
+    NOT FOR CLINICAL DIAGNOSTIC USE, PATIENT CARE, OR DIAGNOSTIC REPORTING
+================================================================================
+ Pipeline: SCCmec Detection Pipeline (Prototype)
+ Author  : Federico Di Marco
+ Status  : Experimental / Academic Research Only
+ 
+ WARNING: This software is NOT validated under IVDR (EU 2017/746) or clinical LDT
+ guidelines. The author assumes NO liability for medical decisions or clinical
+ reports generated using outputs from this workflow.
+================================================================================
+
   --SEQ		    Sequencing technology:
 				          ILL: Illumina [default]
 				          ONT: Oxford Nanopore technology  
@@ -107,6 +121,20 @@ OUT_WHO(WHO.out,params.headWHO)
 }
 else{
 log.info """\
+
+
+===============================================================================
+                       *** RESEARCH USE ONLY (RUO) ***
+    NOT FOR CLINICAL DIAGNOSTIC USE, PATIENT CARE, OR DIAGNOSTIC REPORTING
+================================================================================
+ Pipeline: SCCmec Detection Pipeline (Prototype)
+ Author  : Federico Di Marco
+ Status  : Experimental / Academic Research Only
+ 
+ WARNING: This software is NOT validated under IVDR (EU 2017/746) or clinical LDT
+ guidelines. The author assumes NO liability for medical decisions or clinical
+ reports generated using outputs from this workflow.
+================================================================================
 ================================
 reads   	: $params.reads + '*_R{1,2}*.fastq.gz'
 reference	: $params.ref
