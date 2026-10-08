@@ -265,3 +265,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## IMPORTANT: MEDICAL & CLINICAL USE DISCLAIMER (RESEARCH USE ONLY)
+
+**THIS SOFTWARE IS FOR RESEARCH USE ONLY (RUO). IT IS NOT INTENDED, CERTIFIED, OR APPROVED FOR CLINICAL DIAGNOSTIC USE, PATIENT MANAGEMENT, OR MEDICAL DECISION-MAKING.**
+
+1. **No In Vitro Diagnostic (IVD) Certification:** This software has NOT undergone clinical or analytical validation under European In Vitro Diagnostic Regulation (EU IVDR 2017/746), FDA regulations, or any other national/international diagnostic standards.
+2. **Experimental Research Prototype:** This pipeline is an exploratory academic prototype. The accuracy, sensitivity, and specificity for identifying SCCmec cassettes, mecA/mecC variants, or other genetic determinants have not been clinically validated. Output files must NOT be used to generate clinical reports, antibiograms, or direct patient care actions.
+3. **Institutional & Operator Responsibility:** Any clinical adoption, laboratory-developed test (LDT) development, or diagnostic interpretation derived from or aided by this software is the sole and exclusive responsibility of the clinical laboratory, medical director, and validating personnel performing such activities. The author(s) explicitly disclaim all liability for any direct, indirect, or consequential damages resulting from clinical reliance on this software.
